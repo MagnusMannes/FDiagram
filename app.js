@@ -1,20 +1,21 @@
 /* ──────────  View Switching  ────────── */
-const mainPage    = document.getElementById('main-page');
-const builderPage = document.getElementById('builder-page');
-const backBtn     = document.getElementById('backBtn');
+document.addEventListener('DOMContentLoaded', () => {
+  const mainPage    = document.getElementById('main-page');
+  const builderPage = document.getElementById('builder-page');
+  const backBtn     = document.getElementById('backBtn');
 
-document.getElementById('newBtn').onclick = () => {
-  mainPage.hidden    = true;
-  builderPage.hidden = false;
-};
+  document.getElementById('newBtn').onclick = () => {
+    mainPage.hidden    = true;
+    builderPage.hidden = false;
+  };
 
-backBtn.onclick = () => {
-  builderPage.hidden = true;
-  mainPage.hidden    = false;
-};
+  backBtn.onclick = () => {
+    builderPage.hidden = true;
+    mainPage.hidden    = false;
+  };
 
-document.getElementById('loadBtn').onclick = () =>
-  document.getElementById('fileInput').click();
+  document.getElementById('loadBtn').onclick = () =>
+    document.getElementById('fileInput').click();
 
 /* ──────────  File Import  ────────── */
 document.getElementById('fileInput').onchange = (e) => {
@@ -71,3 +72,5 @@ function loadAssembly(arr){
   dropZone.querySelectorAll('.bha-component, .shape').forEach(el => el.remove());
   arr.forEach(addComponent);
 }
+});
+

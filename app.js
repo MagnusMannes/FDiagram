@@ -1,10 +1,16 @@
 /* ──────────  View Switching  ────────── */
 const mainPage    = document.getElementById('main-page');
 const builderPage = document.getElementById('builder-page');
+const backBtn     = document.getElementById('backBtn');
 
 document.getElementById('newBtn').onclick = () => {
   mainPage.hidden    = true;
   builderPage.hidden = false;
+};
+
+backBtn.onclick = () => {
+  builderPage.hidden = true;
+  mainPage.hidden    = false;
 };
 
 document.getElementById('loadBtn').onclick = () =>
@@ -45,6 +51,12 @@ dropZone.addEventListener('drop', ev => {
 
 /*  Helper: create a visual block in the assembly  */
 function addComponent(tool){
+  if(tool.shape){
+    const div = document.createElement('div');
+    div.className = `shape ${tool.shape}`;
+    dropZone.appendChild(div);
+    return;
+  }
   const div = document.createElement('div');
   div.className = 'bha-component';
   div.innerHTML = `
@@ -56,6 +68,6 @@ function addComponent(tool){
 
 /*  Helper: rebuild the assembly from imported JSON list  */
 function loadAssembly(arr){
-  dropZone.querySelectorAll('.bha-component').forEach(el => el.remove());
+  dropZone.querySelectorAll('.bha-component, .shape').forEach(el => el.remove());
   arr.forEach(addComponent);
 }

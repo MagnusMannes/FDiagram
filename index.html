@@ -23,26 +23,23 @@
 
   <!-- ────────────  BUILDER VIEW  ──────────── -->
   <section id="builder-page" class="view builder" hidden>
-    <!-- left: scrollable palette -->
-    <aside id="palette" class="sidebar">
-      <h2>Items</h2>
-      <div class="tool-item" draggable="true" data-tool='{"name":"Drill Bit","length":0.5,"od":8.5}'>
-        Drill Bit<br><small>8.5"&nbsp;/&nbsp;0.5 ft</small>
-      </div>
-      <div class="tool-item" draggable="true" data-tool='{"name":"Stabilizer","length":5,"od":6.375}'>
-        Stabilizer<br><small>Ø 6.375"&nbsp;/&nbsp;5 ft</small>
-      </div>
-      <div class="tool-item" draggable="true" data-tool='{"name":"Jar","length":10,"od":3}'>
-        Jar<br><small>Ø 3"&nbsp;/&nbsp;10 ft</small>
-      </div>
-      <!-- …add more items here … -->
-    </aside>
+    <header class="builder-header">
+      <button id="backBtn" class="secondary">Back</button>
+    </header>
+    <div class="builder-body">
+      <!-- left: scrollable palette -->
+      <aside id="palette" class="sidebar">
+        <h2>Forms</h2>
+        <div class="tool-item" draggable="true" data-tool='{"shape":"rectangle"}'>Rectangle</div>
+        <div class="tool-item" draggable="true" data-tool='{"shape":"circle"}'>Circle</div>
+        <div class="tool-item" draggable="true" data-tool='{"shape":"triangle"}'>Triangle</div>
+      </aside>
 
-    <!-- right: drop zone -->
-    <main id="dropZone" class="dropzone" ondragover="event.preventDefault()">
-      <h2>Assy 1</h2>
-      <!-- dropped components appear below -->
-    </main>
+      <!-- right: drop zone -->
+      <main id="dropZone" class="dropzone" ondragover="event.preventDefault()">
+        <!-- dropped components appear below -->
+      </main>
+    </div>
   </section>
 
   <script src="app.js"></script>

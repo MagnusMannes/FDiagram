@@ -13,16 +13,23 @@ button:hover{filter:brightness(.95);}
 /*  ─── Layout Containers ───────────────────────────────── */
 .view{width:100vw;height:100vh;}
 .centered{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
-.builder{display:flex;}
+.builder{display:flex;flex-direction:column;}
 
 /*  ─── Sidebar (Item Palette) ──────────────────────────── */
-.sidebar{width:260px;background:#fff;border-right:1px solid #dcdce0;padding:1rem;overflow-y:auto;}
+.builder-header{padding:1rem;background:#fff;border-bottom:1px solid #dcdce0;}
+.builder-body{flex:1;display:flex;}
+.sidebar{flex:0 0 20%;min-width:160px;background:#fff;border-right:1px solid #dcdce0;padding:1rem;overflow-y:auto;}
 .tool-item{border:1px solid #dcdce0;border-radius:10px;padding:.6rem;margin-bottom:.6rem;background:#fefefe;cursor:grab;}
 .tool-item:active{cursor:grabbing;opacity:.8;}
 .tool-item small{color:#6e6e73;}
 
 /*  ─── Drop Zone (Assembly Stack) ──────────────────────── */
-.dropzone{flex:1;padding:1rem;overflow-y:auto;background:#e9f5ff;}
+.dropzone{flex:1;padding:1rem;overflow-y:auto;background:#fff;}
 .dropzone h2{margin-bottom:1rem;}
 .bha-component{border:2px solid #007aff;border-radius:8px;padding:.6rem;margin-bottom:.6rem;background:#fff;display:flex;justify-content:space-between;align-items:center;}
 .dim{color:#6e6e73;font-size:.9rem;}
+
+/*  ─── Simple Shape Previews ───────────────────────────── */
+.shape{width:100px;height:100px;border:2px solid #007aff;border-radius:4px;margin-bottom:.6rem;background:#e9f5ff;}
+.shape.circle{border-radius:50%;}
+.shape.triangle{width:0;height:0;border-left:50px solid transparent;border-right:50px solid transparent;border-bottom:100px solid #e9f5ff;border-radius:0;}

@@ -165,6 +165,7 @@ if (bhaCanvas) {
   nameInput.value = assyObj.name;
   nameInput.addEventListener('input', () => {
     assyObj.name = nameInput.value.trim() || 'Assembly ' + (currentAssemblyIdx + 1);
+    redraw();
   });
 
   fetch('public_components.json')
@@ -224,23 +225,24 @@ if (bhaCanvas) {
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, bhaCanvas.width, bhaCanvas.height);
     ctx.strokeRect(margin, margin, bhaCanvas.width - margin * 2, bhaCanvas.height - margin * 2);
-    const tbW = 180;
-    const tbH = 80;
+    const tbW = 270; // 50% larger width
+    const tbH = 120; // 50% larger height
     const smallRow = tbH / 4;
+    const titleCol = 60; // narrow column for the "Title:" label
     const x = bhaCanvas.width - margin - tbW;
     const y = bhaCanvas.height - margin - tbH;
     ctx.strokeRect(x, y, tbW, tbH);
     ctx.beginPath();
     ctx.moveTo(x, y + smallRow);
     ctx.lineTo(x + tbW, y + smallRow);
-    ctx.moveTo(x + tbW / 2, y);
-    ctx.lineTo(x + tbW / 2, y + smallRow);
+    ctx.moveTo(x + titleCol, y);
+    ctx.lineTo(x + titleCol, y + smallRow);
     ctx.stroke();
 
     ctx.font = '12px sans-serif';
     ctx.fillStyle = '#000';
     ctx.fillText('Title:', x + 4, y + 14);
-    ctx.fillText(assyObj.name, x + tbW / 2 + 4, y + 14);
+    ctx.fillText(assyObj.name, x + titleCol + 4, y + 14);
     ctx.fillText('Comment:', x + 4, y + smallRow + 14);
   }
 

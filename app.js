@@ -115,6 +115,37 @@ if (assemblyList) {
   };
 }
 
+function renderAssemblyList() {
+  document.getElementById('bhaTitle').textContent = currentBha.name || 'BHA';
+  assemblyList.innerHTML = '';
+  currentBha.assemblies.forEach((assy, idx) => {
+    const row = document.createElement('div');
+    const edit = document.createElement('button');
+    edit.className = 'primary';
+    edit.textContent = 'Assy ' + (idx + 1);
+    edit.onclick = () => {
+      currentAssemblyIdx = idx;
+      storeSession();
+      location.href = 'builder.html';
+    };
+    const del = document.createElement('button');
+    del.className = 'secondary';
+    del.textContent = 'Delete';
+    del.onclick = () => {
+      if (!confirm('Delete assembly ' + (idx + 1) + '?')) return;
+      currentBha.assemblies.splice(idx, 1);
+      if (currentAssemblyIdx >= currentBha.assemblies.length) {
+        currentAssemblyIdx = currentBha.assemblies.length - 1;
+      }
+      saveCurrentBha();
+      renderAssemblyList();
+    };
+    row.appendChild(edit);
+    row.appendChild(del);
+    assemblyList.appendChild(row);
+  });
+}
+
 // ───── Builder page ─────
 const bhaCanvas = document.getElementById('bhaCanvas');
 if (bhaCanvas) {

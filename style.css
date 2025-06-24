@@ -33,3 +33,6 @@ button:hover{filter:brightness(.95);}
 .dropzone h2{margin-bottom:1rem;}
 .bha-component{border:2px solid #007aff;border-radius:8px;padding:.6rem;margin-bottom:.6rem;background:#fff;display:flex;justify-content:space-between;align-items:center;}
 .dim{color:#6e6e73;font-size:.9rem;}
+
+/*  ─── Canvas ─────────────────────────────────────────── */
+#bhaCanvas{background:#fff;border:1px solid #dcdce0;margin-bottom:1rem;}

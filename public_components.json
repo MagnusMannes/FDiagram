@@ -1,0 +1,76 @@
+{
+  "components": [
+    {
+      "name": "Component 1",
+      "parts": [
+        {
+          "x": 1314.5,
+          "y": 20,
+          "width": 576,
+          "height": 755.9055118110235,
+          "color": "#369660",
+          "topConnector": "BOX",
+          "bottomConnector": "none",
+          "special": false,
+          "specialForms": [],
+          "symVertices": [
+            {"y": 0, "dx": 0},
+            {"y": 755.9055118110235, "dx": 0}
+          ]
+        },
+        {
+          "x": 1362.5,
+          "y": 775.9055118110234,
+          "width": 480,
+          "height": 120,
+          "color": "#2a794c",
+          "topConnector": "none",
+          "bottomConnector": "none",
+          "special": false,
+          "specialForms": [],
+          "symVertices": [
+            {"y": 0, "dx": 48},
+            {"y": 120, "dx": 0}
+          ]
+        },
+        {
+          "x": 1362.5,
+          "y": 895.9055118110234,
+          "width": 480,
+          "height": 377.95275590551176,
+          "color": "#369660",
+          "topConnector": "none",
+          "bottomConnector": "PIN",
+          "special": false,
+          "specialForms": [],
+          "symVertices": [
+            {"y": 0, "dx": 0},
+            {"y": 377.95275590551176, "dx": 0}
+          ]
+        }
+      ],
+      "drawnShapes": []
+    },
+    {
+      "name": "Component 2",
+      "parts": [
+        {
+          "x": 1314.5,
+          "y": 20,
+          "width": 576,
+          "height": 944.8818897637794,
+          "color": "#cccccc",
+          "topConnector": "BOX",
+          "bottomConnector": "PIN",
+          "special": false,
+          "specialForms": [],
+          "symVertices": [
+            {"y": 0, "dx": 0},
+            {"y": 944.8818897637794, "dx": 0}
+          ]
+        }
+      ],
+      "drawnShapes": []
+    }
+  ]
+}

@@ -108,34 +108,79 @@ if (assemblyList) {
     storeSession();
     location.href = 'builder.html';
   };
-  document.getElementById('backMainBtn').onclick = () => { storeSession(); location.href = 'index.html'; };
+  document.getElementById('backMainBtn').onclick = () => {
+    storeSession();
+    if (history.length > 1) history.back();
+    else location.href = 'index.html';
+  };
 }
 
 // ───── Builder page ─────
-const dropZone = document.getElementById('dropZone');
-if (dropZone) {
-  document.querySelectorAll('.tool-item').forEach(item => {
-    item.addEventListener('dragstart', ev => {
-      ev.dataTransfer.setData('application/json', item.dataset.tool);
+const bhaCanvas = document.getElementById('bhaCanvas');
+if (bhaCanvas) {
+  const ctx = bhaCanvas.getContext('2d');
+  let placed = [];
+
+  document.getElementById('assyTitle').textContent = 'Assembly ' + (currentAssemblyIdx + 1);
+
+  fetch('public_components.json')
+    .then(r => r.json())
+    .then(data => {
+      if (data && Array.isArray(data.components)) {
+        data.components.forEach(c => addPaletteItem(c, document.getElementById('publicList')));
+      }
+    });
+
+  const privateInput = document.getElementById('privateInput');
+  privateInput.addEventListener('change', e => {
+    const list = document.getElementById('privateList');
+    Array.from(e.target.files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try { addPaletteItem(JSON.parse(reader.result), list); } catch {}
+      };
+      reader.readAsText(file);
     });
   });
 
-  loadAssembly(currentBha.assemblies[currentAssemblyIdx] || []);
-  document.getElementById('assyTitle').textContent = 'Assy ' + (currentAssemblyIdx + 1);
+  function addPaletteItem(comp, container) {
+    const div = document.createElement('div');
+    div.className = 'tool-item';
+    div.draggable = true;
+    div.textContent = comp.name || 'Component';
+    div.dataset.comp = JSON.stringify(comp);
+    div.addEventListener('dragstart', ev => {
+      ev.dataTransfer.setData('application/json', div.dataset.comp);
+    });
+    container.appendChild(div);
+  }
 
-  dropZone.addEventListener('drop', ev => {
+  bhaCanvas.addEventListener('dragover', ev => ev.preventDefault());
+  bhaCanvas.addEventListener('drop', ev => {
     ev.preventDefault();
     const json = ev.dataTransfer.getData('application/json');
     if (!json) return;
-    const tool = JSON.parse(json);
-    currentAssembly.push(tool);
-    currentBha.assemblies[currentAssemblyIdx] = currentAssembly;
-    addComponent(tool);
-    saveCurrentBha();
+    const comp = JSON.parse(json);
+    drawComponent(comp, ev.offsetX, ev.offsetY);
+    placed.push({ comp, x: ev.offsetX, y: ev.offsetY });
   });
 
+  function drawComponent(comp, x, y) {
+    comp.parts.forEach(p => {
+      ctx.fillStyle = p.color || '#ccc';
+      ctx.fillRect(x + (p.x || 0), y + (p.y || 0), p.width, p.height);
+      ctx.strokeStyle = '#000';
+      ctx.strokeRect(x + (p.x || 0), y + (p.y || 0), p.width, p.height);
+    });
+  }
+
+  if (currentBha.assemblies[currentAssemblyIdx]) {
+    placed = currentBha.assemblies[currentAssemblyIdx];
+    placed.forEach(item => drawComponent(item.comp, item.x, item.y));
+  }
+
   document.getElementById('backAssyBtn').onclick = () => {
-    currentBha.assemblies[currentAssemblyIdx] = [...currentAssembly];
+    currentBha.assemblies[currentAssemblyIdx] = placed;
     saveCurrentBha();
     storeSession();
     location.href = 'assembly.html';

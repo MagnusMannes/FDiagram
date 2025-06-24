@@ -257,6 +257,24 @@ if (bhaCanvas) {
   }
   redraw();
 
+  document.getElementById('printPdfBtn').onclick = () => {
+    const now = new Date();
+    const stamp = now.toISOString().replace(/[:T]/g, '-').split('.')[0];
+    const fileName = (assyObj.name || 'assembly') + '_' + stamp;
+    const imgData = bhaCanvas.toDataURL('image/png');
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write('<html><head><title>' + fileName + '</title>');
+    win.document.write('<style>@page{margin:0;}body{margin:0;}img{width:100%;height:auto;}</style>');
+    win.document.write('</head><body>');
+    win.document.write('<img src="' + imgData + '">');
+    win.document.write('</body></html>');
+    win.document.close();
+    win.focus();
+    win.print();
+    win.onafterprint = () => win.close();
+  };
+
   document.getElementById('backAssyBtn').onclick = () => {
     assyObj.items = placed;
     saveCurrentBha();

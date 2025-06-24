@@ -9,6 +9,7 @@ button{padding:.7rem 1.4rem;border:0;border-radius:12px;font-size:1rem;cursor:po
 button.primary{background:#007aff;color:#fff;}
 button.secondary{background:#e0e0e5;color:#1d1d1f;margin-left:1rem;}
 button.danger{background:#ff3b30;color:#fff;margin-left:1rem;}
+button.success{background:#28a745;color:#fff;margin-left:1rem;}
 button:hover{filter:brightness(.95);}
 
 /*  ─── Layout Containers ───────────────────────────────── */
@@ -20,6 +21,7 @@ button:hover{filter:brightness(.95);}
 .list div{display:flex;justify-content:space-between;}
 .back-btn{margin-top:1rem;}
 .view.builder .back-btn{position:absolute;bottom:1rem;left:1rem;margin-top:0;}
+.view.builder .print-btn{position:absolute;bottom:4rem;left:1rem;}
 
 /*  ensure older browsers respect the hidden attribute  */
 [hidden]{display:none!important;}

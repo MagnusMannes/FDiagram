@@ -19,6 +19,9 @@ button:hover{filter:brightness(.95);}
 .list div{display:flex;justify-content:space-between;}
 .back-btn{margin-top:1rem;}
 
+/*  ensure older browsers respect the hidden attribute  */
+[hidden]{display:none!important;}
+
 /*  ─── Sidebar (Item Palette) ──────────────────────────── */
 .sidebar{width:260px;background:#fff;border-right:1px solid #dcdce0;padding:1rem;overflow-y:auto;}
 .tool-item{border:1px solid #dcdce0;border-radius:10px;padding:.6rem;margin-bottom:.6rem;background:#fefefe;cursor:grab;}

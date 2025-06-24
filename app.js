@@ -260,6 +260,8 @@ const bhaCanvas = document.getElementById('bhaCanvas');
 if (bhaCanvas) {
   const ctx = bhaCanvas.getContext('2d');
   let placed = [];
+  const menu = document.getElementById('contextMenu');
+  let contextItem = null;
 
   const nameInput = document.getElementById('assyTitle');
   const assyObj = currentBha.assemblies[currentAssemblyIdx] || { name: 'Assembly ' + (currentAssemblyIdx + 1), items: [] };
@@ -307,7 +309,7 @@ if (bhaCanvas) {
     const json = ev.dataTransfer.getData('application/json');
     if (!json) return;
     const comp = normalizeComponent(JSON.parse(json));
-    placed.push({ comp, x: ev.offsetX, y: ev.offsetY });
+    placed.push({ comp, x: ev.offsetX, y: ev.offsetY, flipped: false });
     redraw();
   });
 
@@ -354,6 +356,72 @@ if (bhaCanvas) {
     }
     dragObj = null;
     redraw();
+  });
+
+  bhaCanvas.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const rect = bhaCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    contextItem = null;
+    for (let i = placed.length - 1; i >= 0; i--) {
+      const it = placed[i];
+      const b = getComponentBounds(it.comp);
+      if (x >= it.x + b.minX && x <= it.x + b.maxX &&
+          y >= it.y + b.minY && y <= it.y + b.maxY) {
+        contextItem = it;
+        break;
+      }
+    }
+    if (!contextItem) { menu.style.display = 'none'; return; }
+
+    menu.style.left = e.clientX + 'px';
+    menu.style.top = e.clientY + 'px';
+
+    const topEnabled = hasTopThread(contextItem.comp);
+    const bottomEnabled = hasBottomThread(contextItem.comp);
+    document.getElementById('toggleTopThread').textContent =
+      (topEnabled ? 'Disable' : 'Enable') + ' uphole thread';
+    document.getElementById('toggleBottomThread').textContent =
+      (bottomEnabled ? 'Disable' : 'Enable') + ' downhole thread';
+
+    menu.style.display = 'block';
+  });
+
+  window.addEventListener('click', () => { menu.style.display = 'none'; });
+
+  document.getElementById('changeColorMenu').addEventListener('click', () => {
+    if (!contextItem) return;
+    const c = prompt('Enter colour (e.g., #ff0000):', contextItem.comp.parts[0].color || '#cccccc');
+    if (c) {
+      contextItem.comp.parts.forEach(p => { p.color = c; });
+      redraw();
+    }
+    menu.style.display = 'none';
+  });
+
+  document.getElementById('toggleTopThread').addEventListener('click', () => {
+    if (contextItem) {
+      toggleThread(contextItem.comp, 'top');
+      redraw();
+    }
+    menu.style.display = 'none';
+  });
+
+  document.getElementById('toggleBottomThread').addEventListener('click', () => {
+    if (contextItem) {
+      toggleThread(contextItem.comp, 'bottom');
+      redraw();
+    }
+    menu.style.display = 'none';
+  });
+
+  document.getElementById('flipMenu').addEventListener('click', () => {
+    if (contextItem) {
+      contextItem.flipped = !contextItem.flipped;
+      redraw();
+    }
+    menu.style.display = 'none';
   });
 
   function normalizeComponent(comp) {
@@ -441,6 +509,23 @@ if (bhaCanvas) {
     const ng = Math.round(g * (1 - p));
     const nb = Math.round(b * (1 - p));
     return rgbToHex(nr, ng, nb);
+  }
+
+  function hasTopThread(comp) {
+    return comp.parts.some(p => p.topConnector && p.topConnector !== 'none');
+  }
+
+  function hasBottomThread(comp) {
+    return comp.parts.some(p => p.bottomConnector && p.bottomConnector !== 'none');
+  }
+
+  function toggleThread(comp, pos) {
+    const prop = pos === 'top' ? 'topConnector' : 'bottomConnector';
+    comp.parts.forEach(p => {
+      if (p[prop] !== undefined) {
+        p[prop] = (p[prop] && p[prop] !== 'none') ? 'none' : 'PIN';
+      }
+    });
   }
 
   function drawConnector(part, pos, type) {
@@ -564,7 +649,14 @@ if (bhaCanvas) {
     });
   }
 
-  function drawComponent(comp, x, y) {
+  function drawComponent(comp, x, y, flipped) {
+    ctx.save();
+    if (flipped) {
+      const b = getComponentBounds(comp);
+      ctx.translate(x + b.width / 2, y + b.height / 2);
+      ctx.rotate(Math.PI);
+      ctx.translate(-(x + b.width / 2), -(y + b.height / 2));
+    }
     comp.parts.forEach(p => drawPart(p, x, y));
     drawShapes(comp, x, y);
     comp.parts.forEach(p => {
@@ -574,6 +666,7 @@ if (bhaCanvas) {
       if (p.bottomConnector && p.bottomConnector !== 'none')
         drawConnector(part, 'bottom', p.bottomConnector);
     });
+    ctx.restore();
   }
 
   function getComponentBounds(comp) {
@@ -648,11 +741,16 @@ if (bhaCanvas) {
   function redraw() {
     ctx.clearRect(0, 0, bhaCanvas.width, bhaCanvas.height);
     drawFrame();
-    placed.forEach(item => drawComponent(item.comp, item.x, item.y));
+    placed.forEach(item => drawComponent(item.comp, item.x, item.y, item.flipped));
   }
 
   if (assyObj.items) {
-    placed = assyObj.items;
+    placed = assyObj.items.map(it => ({
+      comp: it.comp,
+      x: it.x,
+      y: it.y,
+      flipped: it.flipped || false
+    }));
   }
   redraw();
 
@@ -689,7 +787,7 @@ if (bhaCanvas) {
     placed.forEach(item => {
       ctx.save();
       ctx.scale(scale, scale);
-      drawComponent(item.comp, item.x, item.y);
+      drawComponent(item.comp, item.x, item.y, item.flipped);
       ctx.restore();
     });
   }

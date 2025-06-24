@@ -113,6 +113,19 @@ if (assemblyList) {
     if (history.length > 1) history.back();
     else location.href = 'index.html';
   };
+
+  const delBtn = document.getElementById('delBhaBtn');
+  if (delBtn) delBtn.onclick = () => {
+    if (!confirm('Are you sure you want to delete this BHA?')) return;
+    const names = getBhaNames().filter(n => n !== currentBha.name);
+    localStorage.setItem('bha-names', JSON.stringify(names));
+    localStorage.removeItem('bha-' + currentBha.name);
+    localStorage.removeItem('currentBha');
+    localStorage.removeItem('currentAssemblyIdx');
+    currentBha = { name: '', assemblies: [] };
+    currentAssemblyIdx = 0;
+    location.href = 'index.html';
+  };
 }
 
 // ───── Builder page ─────
@@ -279,9 +292,10 @@ function renderAssemblyList() {
     };
 
     const del = document.createElement('button');
-    del.className = 'secondary';
+    del.className = 'danger';
     del.textContent = 'Delete';
     del.onclick = () => {
+      if (!confirm('Are you sure you want to delete this assembly?')) return;
       currentBha.assemblies.splice(idx, 1);
       if (currentAssemblyIdx >= currentBha.assemblies.length) {
         currentAssemblyIdx = currentBha.assemblies.length - 1;

@@ -71,15 +71,23 @@ if (fileInput) {
 // ───── Load page ─────
 const loadList = document.getElementById('loadList');
 if (loadList) {
+  renderLoadList();
+  document.getElementById('loadBackBtn').onclick = () => location.href = 'index.html';
+}
+
+function renderLoadList() {
   loadList.innerHTML = '';
-  const names = getBhaNames();
-  if (!names.length) loadList.textContent = 'No stored BHAs';
-  names.forEach(name => {
-    const btn = document.createElement('button');
-    btn.className = 'primary';
-    btn.textContent = name;
-    btn.onclick = () => {
-      const item = localStorage.getItem('bha-' + name);
+  const list = getBhaNames();
+  if (!list.length) { loadList.textContent = 'No stored BHAs'; return; }
+  list.forEach(info => {
+    const row = document.createElement('div');
+    row.className = 'load-row';
+
+    const loadBtn = document.createElement('button');
+    loadBtn.className = 'primary';
+    loadBtn.textContent = info.name;
+    loadBtn.onclick = () => {
+      const item = localStorage.getItem('bha-' + info.name);
       if (!item) { alert('BHA not found'); return; }
       try {
         const obj = JSON.parse(item);
@@ -92,9 +100,26 @@ if (loadList) {
         location.href = 'assembly.html';
       } catch { alert('Failed to load BHA'); }
     };
-    loadList.appendChild(btn);
+
+    const created = document.createElement('span');
+    created.className = 'dim';
+    created.textContent = new Date(info.createdAt).toLocaleDateString();
+
+    const updated = document.createElement('span');
+    updated.className = 'dim';
+    updated.textContent = new Date(info.updatedAt).toLocaleDateString();
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'danger';
+    delBtn.textContent = 'Delete';
+    delBtn.onclick = () => { deleteBha(info.name); renderLoadList(); };
+
+    row.appendChild(loadBtn);
+    row.appendChild(created);
+    row.appendChild(updated);
+    row.appendChild(delBtn);
+    loadList.appendChild(row);
   });
-  document.getElementById('loadBackBtn').onclick = () => location.href = 'index.html';
 }
 
 // ───── Assembly page ─────
@@ -114,18 +139,6 @@ if (assemblyList) {
     else location.href = 'index.html';
   };
 
-  const delBtn = document.getElementById('delBhaBtn');
-  if (delBtn) delBtn.onclick = () => {
-    if (!confirm('Are you sure you want to delete this BHA?')) return;
-    const names = getBhaNames().filter(n => n !== currentBha.name);
-    localStorage.setItem('bha-names', JSON.stringify(names));
-    localStorage.removeItem('bha-' + currentBha.name);
-    localStorage.removeItem('currentBha');
-    localStorage.removeItem('currentAssemblyIdx');
-    currentBha = { name: '', assemblies: [] };
-    currentAssemblyIdx = 0;
-    location.href = 'index.html';
-  };
 }
 
 // ───── Builder page ─────
@@ -217,35 +230,64 @@ function loadAssembly(arr) {
 }
 
 function getBhaNames() {
-  let list;
-  try { list = JSON.parse(localStorage.getItem('bha-names') || '[]'); } catch { list = []; }
-  list = list.filter(name => {
+  let names;
+  try { names = JSON.parse(localStorage.getItem('bha-names') || '[]'); } catch { names = []; }
+  const out = [];
+  const now = Date.now();
+  names.forEach(name => {
     const item = localStorage.getItem('bha-' + name);
-    if (!item) return false;
+    if (!item) return;
     try {
       const obj = JSON.parse(item);
-      if (Date.now() - obj.savedAt > MONTH_MS) {
+      const updated = obj.updatedAt || obj.savedAt || 0;
+      if (now - updated > MONTH_MS) {
         localStorage.removeItem('bha-' + name);
-        return false;
+        return;
       }
-      return true;
+      out.push({ name, createdAt: obj.createdAt || updated, updatedAt: updated });
     } catch {
       localStorage.removeItem('bha-' + name);
-      return false;
     }
   });
-  localStorage.setItem('bha-names', JSON.stringify(list));
-  return list;
+  localStorage.setItem('bha-names', JSON.stringify(out.map(o => o.name)));
+  out.sort((a, b) => b.updatedAt - a.updatedAt);
+  return out;
 }
 
 function saveCurrentBha() {
   if (!currentBha.name) return;
-  const data = { name: currentBha.name, assemblies: currentBha.assemblies, savedAt: Date.now() };
-  localStorage.setItem('bha-' + currentBha.name, JSON.stringify(data));
-  const names = getBhaNames();
+  const key = 'bha-' + currentBha.name;
+  let created = Date.now();
+  const existing = localStorage.getItem(key);
+  if (existing) {
+    try { created = JSON.parse(existing).createdAt || created; } catch {}
+  }
+  const data = {
+    name: currentBha.name,
+    assemblies: currentBha.assemblies,
+    createdAt: created,
+    updatedAt: Date.now()
+  };
+  localStorage.setItem(key, JSON.stringify(data));
+  const names = getBhaNames().map(n => n.name);
   if (!names.includes(currentBha.name)) {
     names.push(currentBha.name);
     localStorage.setItem('bha-names', JSON.stringify(names));
+  }
+}
+
+function deleteBha(name) {
+  if (!confirm('Are you sure you want to delete this BHA?')) return;
+  let names;
+  try { names = JSON.parse(localStorage.getItem('bha-names') || '[]'); } catch { names = []; }
+  names = names.filter(n => n !== name);
+  localStorage.setItem('bha-names', JSON.stringify(names));
+  localStorage.removeItem('bha-' + name);
+  if (currentBha.name === name) {
+    localStorage.removeItem('currentBha');
+    localStorage.removeItem('currentAssemblyIdx');
+    currentBha = { name: '', assemblies: [] };
+    currentAssemblyIdx = 0;
   }
 }
 

@@ -4,64 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fishing BHA Tool</title>
-
-  <!--  Apple-inspired minimalist styling -->
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
-
-  <!-- ────────────  MAIN MENU  ──────────── -->
-  <section id="main-page" class="view centered">
+<body data-page="main">
+  <section class="view centered">
     <h1>Fishing BHA Tool</h1>
-
     <button id="newBtn" class="primary">New BHA</button>
     <button id="historyBtn" class="secondary">Load BHA from browser history</button>
     <button id="loadBtn" class="secondary">Load BHA from local files</button>
-
-    <!-- hidden file picker -->
     <input type="file" id="fileInput" accept="application/json" hidden />
   </section>
-
-  <!-- ────────────  BHA MENU  ──────────── -->
-  <section id="assembly-page" class="view centered" hidden>
-    <h1 id="bhaTitle">BHA</h1>
-    <div id="assemblyList" class="list"></div>
-    <button id="addAssyBtn" class="primary">Add Assembly</button>
-    <button id="backMainBtn" class="secondary back-btn">Back</button>
-  </section>
-
-  <!-- ────────────  LOAD MENU  ──────────── -->
-  <section id="load-page" class="view centered" hidden>
-    <h1>Select BHA</h1>
-    <div id="loadList" class="list"></div>
-    <button id="loadBackBtn" class="secondary back-btn">Back</button>
-  </section>
-
-  <!-- ────────────  BUILDER VIEW  ──────────── -->
-  <section id="builder-page" class="view builder" hidden>
-    <!-- left: scrollable palette -->
-    <aside id="palette" class="sidebar">
-      <h2>Items</h2>
-      <div class="tool-item" draggable="true" data-tool='{"name":"Drill Bit","length":0.5,"od":8.5}'>
-        Drill Bit<br><small>8.5"&nbsp;/&nbsp;0.5 ft</small>
-      </div>
-      <div class="tool-item" draggable="true" data-tool='{"name":"Stabilizer","length":5,"od":6.375}'>
-        Stabilizer<br><small>Ø 6.375"&nbsp;/&nbsp;5 ft</small>
-      </div>
-      <div class="tool-item" draggable="true" data-tool='{"name":"Jar","length":10,"od":3}'>
-        Jar<br><small>Ø 3"&nbsp;/&nbsp;10 ft</small>
-      </div>
-      <!-- …add more items here … -->
-    </aside>
-
-    <!-- right: drop zone -->
-    <main id="dropZone" class="dropzone" ondragover="event.preventDefault()">
-      <h2 id="assyTitle">Assy 1</h2>
-      <!-- dropped components appear below -->
-      <button id="backAssyBtn" class="secondary back-btn">Back to Assemblies</button>
-    </main>
-  </section>
-
   <script src="app.js"></script>
 </body>
 </html>

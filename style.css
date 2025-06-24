@@ -8,6 +8,7 @@ h2{font-size:1.2rem;margin-bottom:.5rem;}
 button{padding:.7rem 1.4rem;border:0;border-radius:12px;font-size:1rem;cursor:pointer;transition:background .2s;}
 button.primary{background:#007aff;color:#fff;}
 button.secondary{background:#e0e0e5;color:#1d1d1f;margin-left:1rem;}
+button.danger{background:#ff3b30;color:#fff;margin-left:1rem;}
 button:hover{filter:brightness(.95);}
 
 /*  ─── Layout Containers ───────────────────────────────── */

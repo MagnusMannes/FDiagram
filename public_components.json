@@ -1,7 +1,7 @@
 {
   "components": [
     {
-      "name": "Component 1",
+      "name": "Crossover 6-5in",
       "parts": [
         {
           "x": 1314.5,
@@ -52,25 +52,48 @@
       "drawnShapes": []
     },
     {
-      "name": "Component 2",
+      "name": "Generic LWD",
       "parts": [
         {
-          "x": 1314.5,
+          "x": 1505,
           "y": 20,
           "width": 576,
-          "height": 944.8818897637794,
+          "height": 15118.110236220471,
           "color": "#cccccc",
           "topConnector": "BOX",
-          "bottomConnector": "PIN",
+          "bottomConnector": "BOX",
           "special": false,
           "specialForms": [],
           "symVertices": [
             {"y": 0, "dx": 0},
-            {"y": 944.8818897637794, "dx": 0}
+            {"y": 15118.110236220471, "dx": 0}
           ]
         }
       ],
-      "drawnShapes": []
+      "drawnShapes": [
+        {
+          "type": "circle",
+          "width": 2,
+          "parentIndex": 0,
+          "cx": 1796.5,
+          "cy": 10597.166666666668,
+          "r": 28.532308012228118,
+          "relCX": 0.5060763888888888,
+          "relCY": 0.6996355034722224,
+          "relR": 0.003636052962897934
+        },
+        {
+          "type": "circle",
+          "width": 50,
+          "parentIndex": 0,
+          "cx": 1797.7142857142856,
+          "cy": 10597.142857142859,
+          "r": 8.241260058203864,
+          "relCX": 0.5081845238095235,
+          "relCY": 0.6996339285714287,
+          "relR": 0.001050236035577709
+        }
+      ]
     }
   ]
 }

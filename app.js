@@ -226,19 +226,22 @@ if (bhaCanvas) {
     ctx.strokeRect(margin, margin, bhaCanvas.width - margin * 2, bhaCanvas.height - margin * 2);
     const tbW = 180;
     const tbH = 80;
-    const big = 40;
+    const smallRow = tbH / 4;
     const x = bhaCanvas.width - margin - tbW;
     const y = bhaCanvas.height - margin - tbH;
     ctx.strokeRect(x, y, tbW, tbH);
     ctx.beginPath();
-    ctx.moveTo(x, y + big);
-    ctx.lineTo(x + tbW, y + big);
-    const rowH = (tbH - big) / 3;
-    ctx.moveTo(x, y + big + rowH);
-    ctx.lineTo(x + tbW, y + big + rowH);
-    ctx.moveTo(x, y + big + rowH * 2);
-    ctx.lineTo(x + tbW, y + big + rowH * 2);
+    ctx.moveTo(x, y + smallRow);
+    ctx.lineTo(x + tbW, y + smallRow);
+    ctx.moveTo(x + tbW / 2, y);
+    ctx.lineTo(x + tbW / 2, y + smallRow);
     ctx.stroke();
+
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = '#000';
+    ctx.fillText('Title:', x + 4, y + 14);
+    ctx.fillText(assyObj.name, x + tbW / 2 + 4, y + 14);
+    ctx.fillText('Comment:', x + 4, y + smallRow + 14);
   }
 
   function redraw() {

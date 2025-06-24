@@ -9,7 +9,16 @@ loadSession();
 function loadSession() {
   try {
     const obj = JSON.parse(localStorage.getItem('currentBha') || '{}');
-    currentBha = { name: obj.name || '', assemblies: obj.assemblies || [] };
+    currentBha = { name: obj.name || '', assemblies: [] };
+    if (Array.isArray(obj.assemblies)) {
+      obj.assemblies.forEach((a, i) => {
+        if (Array.isArray(a)) {
+          currentBha.assemblies.push({ name: 'Assembly ' + (i + 1), items: a });
+        } else if (a && Array.isArray(a.items)) {
+          currentBha.assemblies.push({ name: a.name || 'Assembly ' + (i + 1), items: a.items });
+        }
+      });
+    }
     currentAssemblyIdx = parseInt(localStorage.getItem('currentAssemblyIdx') || '0', 10);
   } catch {
     currentBha = { name: '', assemblies: [] };
@@ -51,14 +60,17 @@ if (fileInput) {
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result);
-        if (Array.isArray(data)) {
-          currentBha = { name: 'Imported BHA', assemblies: [data] };
-        } else {
-          currentBha = {
-            name: data.name || 'Imported BHA',
-            assemblies: data.assemblies || [data.assembly || []]
-          };
-        }
+        currentBha = { name: data.name || 'Imported BHA', assemblies: [] };
+        const arr = Array.isArray(data.assemblies) ? data.assemblies :
+                    (Array.isArray(data.assembly) ? [data.assembly] :
+                    (Array.isArray(data) ? data : []));
+        arr.forEach((a, i) => {
+          if (Array.isArray(a)) {
+            currentBha.assemblies.push({ name: 'Assembly ' + (i + 1), items: a });
+          } else if (a && Array.isArray(a.items)) {
+            currentBha.assemblies.push({ name: a.name || 'Assembly ' + (i + 1), items: a.items });
+          }
+        });
         saveCurrentBha();
         storeSession();
         location.href = 'assembly.html';
@@ -127,7 +139,8 @@ const assemblyList = document.getElementById('assemblyList');
 if (assemblyList) {
   renderAssemblyList();
   document.getElementById('addAssyBtn').onclick = () => {
-    currentBha.assemblies.push([]);
+    const num = currentBha.assemblies.length + 1;
+    currentBha.assemblies.push({ name: 'Assembly ' + num, items: [] });
     currentAssemblyIdx = currentBha.assemblies.length - 1;
     saveCurrentBha();
     storeSession();
@@ -147,7 +160,12 @@ if (bhaCanvas) {
   const ctx = bhaCanvas.getContext('2d');
   let placed = [];
 
-  document.getElementById('assyTitle').textContent = 'Assembly ' + (currentAssemblyIdx + 1);
+  const nameInput = document.getElementById('assyTitle');
+  const assyObj = currentBha.assemblies[currentAssemblyIdx] || { name: 'Assembly ' + (currentAssemblyIdx + 1), items: [] };
+  nameInput.value = assyObj.name;
+  nameInput.addEventListener('input', () => {
+    assyObj.name = nameInput.value.trim() || 'Assembly ' + (currentAssemblyIdx + 1);
+  });
 
   fetch('public_components.json')
     .then(r => r.json())
@@ -187,8 +205,8 @@ if (bhaCanvas) {
     const json = ev.dataTransfer.getData('application/json');
     if (!json) return;
     const comp = JSON.parse(json);
-    drawComponent(comp, ev.offsetX, ev.offsetY);
     placed.push({ comp, x: ev.offsetX, y: ev.offsetY });
+    redraw();
   });
 
   function drawComponent(comp, x, y) {
@@ -200,13 +218,42 @@ if (bhaCanvas) {
     });
   }
 
-  if (currentBha.assemblies[currentAssemblyIdx]) {
-    placed = currentBha.assemblies[currentAssemblyIdx];
+  function drawFrame() {
+    const margin = 20;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, 0, bhaCanvas.width, bhaCanvas.height);
+    ctx.strokeRect(margin, margin, bhaCanvas.width - margin * 2, bhaCanvas.height - margin * 2);
+    const tbW = 180;
+    const tbH = 80;
+    const big = 40;
+    const x = bhaCanvas.width - margin - tbW;
+    const y = bhaCanvas.height - margin - tbH;
+    ctx.strokeRect(x, y, tbW, tbH);
+    ctx.beginPath();
+    ctx.moveTo(x, y + big);
+    ctx.lineTo(x + tbW, y + big);
+    const rowH = (tbH - big) / 3;
+    ctx.moveTo(x, y + big + rowH);
+    ctx.lineTo(x + tbW, y + big + rowH);
+    ctx.moveTo(x, y + big + rowH * 2);
+    ctx.lineTo(x + tbW, y + big + rowH * 2);
+    ctx.stroke();
+  }
+
+  function redraw() {
+    ctx.clearRect(0, 0, bhaCanvas.width, bhaCanvas.height);
+    drawFrame();
     placed.forEach(item => drawComponent(item.comp, item.x, item.y));
   }
 
+  if (assyObj.items) {
+    placed = assyObj.items;
+  }
+  redraw();
+
   document.getElementById('backAssyBtn').onclick = () => {
-    currentBha.assemblies[currentAssemblyIdx] = placed;
+    assyObj.items = placed;
     saveCurrentBha();
     storeSession();
     // Replace the builder page in history so returning from assemblies
@@ -326,7 +373,7 @@ function renderAssemblyList() {
 
     const edit = document.createElement('button');
     edit.className = 'primary';
-    edit.textContent = 'Assembly ' + (idx + 1);
+    edit.textContent = assy.name || 'Assembly ' + (idx + 1);
     edit.onclick = () => {
       currentAssemblyIdx = idx;
       storeSession();

@@ -22,6 +22,21 @@
     <input type="file" id="fileInput" accept="application/json" hidden />
   </section>
 
+  <!-- ────────────  BHA MENU  ──────────── -->
+  <section id="assembly-page" class="view centered" hidden>
+    <h1 id="bhaTitle">BHA</h1>
+    <div id="assemblyList" class="list"></div>
+    <button id="addAssyBtn" class="primary">Add Assembly</button>
+    <button id="backMainBtn" class="secondary back-btn">Back</button>
+  </section>
+
+  <!-- ────────────  LOAD MENU  ──────────── -->
+  <section id="load-page" class="view centered" hidden>
+    <h1>Select BHA</h1>
+    <div id="loadList" class="list"></div>
+    <button id="loadBackBtn" class="secondary back-btn">Back</button>
+  </section>
+
   <!-- ────────────  BUILDER VIEW  ──────────── -->
   <section id="builder-page" class="view builder" hidden>
     <!-- left: scrollable palette -->
@@ -41,8 +56,9 @@
 
     <!-- right: drop zone -->
     <main id="dropZone" class="dropzone" ondragover="event.preventDefault()">
-      <h2>Assy 1</h2>
+      <h2 id="assyTitle">Assy 1</h2>
       <!-- dropped components appear below -->
+      <button id="backAssyBtn" class="secondary back-btn">Back to Assemblies</button>
     </main>
   </section>
 

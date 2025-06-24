@@ -35,5 +35,10 @@ button:hover{filter:brightness(.95);}
 .bha-component{border:2px solid #007aff;border-radius:8px;padding:.6rem;margin-bottom:.6rem;background:#fff;display:flex;justify-content:space-between;align-items:center;}
 .dim{color:#6e6e73;font-size:.9rem;}
 
+/*  ─── Load Page Table ───────────────────────────────── */
+.load-list{width:100%;max-width:600px;}
+.load-row{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:.5rem;}
+.load-row button{margin:0;}
+
 /*  ─── Canvas ─────────────────────────────────────────── */
 #bhaCanvas{background:#fff;border:1px solid #dcdce0;margin-bottom:1rem;}

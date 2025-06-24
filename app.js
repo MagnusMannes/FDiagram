@@ -159,6 +159,7 @@ const bhaCanvas = document.getElementById('bhaCanvas');
 if (bhaCanvas) {
   const ctx = bhaCanvas.getContext('2d');
   let placed = [];
+  let CONNECTOR_TEMPLATE = null;
 
   const nameInput = document.getElementById('assyTitle');
   const assyObj = currentBha.assemblies[currentAssemblyIdx] || { name: 'Assembly ' + (currentAssemblyIdx + 1), items: [] };
@@ -175,6 +176,11 @@ if (bhaCanvas) {
         data.components.forEach(c => addPaletteItem(c, document.getElementById('publicList')));
       }
     });
+
+  fetch('fdrawingv1/threads.json')
+    .then(r => r.json())
+    .then(d => { CONNECTOR_TEMPLATE = preprocessConnectorTemplate(d); redraw(); })
+    .catch(e => console.error('Failed to load threads.json', e));
 
   const privateInput = document.getElementById('privateInput');
   privateInput.addEventListener('change', e => {
@@ -344,6 +350,106 @@ if (bhaCanvas) {
     return pts;
   }
 
+  function preprocessConnectorTemplate(data) {
+    const parts = [];
+    const lines = [];
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    (data.parts || []).forEach(p => {
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x + p.width);
+      maxY = Math.max(maxY, p.y + p.height);
+      parts.push({
+        x: p.x,
+        y: p.y,
+        width: p.width,
+        height: p.height,
+        verts: (p.symVertices || []).slice().sort((a,b)=>a.y-b.y)
+      });
+    });
+    (data.drawnShapes || []).forEach(s => {
+      if (s.type === 'line') {
+        minX = Math.min(minX, s.x1, s.x2);
+        maxX = Math.max(maxX, s.x1, s.x2);
+        minY = Math.min(minY, s.y1, s.y2);
+        maxY = Math.max(maxY, s.y1, s.y2);
+        lines.push({x1:s.x1,y1:s.y1,x2:s.x2,y2:s.y2});
+      }
+    });
+    const width = maxX - minX;
+    const height = maxY - minY;
+    parts.forEach(p => {
+      p.x -= minX;
+      p.y -= minY;
+      const x = p.x;
+      const y = p.y;
+      const w = p.width;
+      const h = p.height;
+      const verts = p.verts;
+      const pts = [];
+      pts.push({x,y});
+      pts.push({x:x+w, y});
+      verts.forEach(v => pts.push({x:x+w+v.dx, y:y+v.y}));
+      pts.push({x:x+w, y:y+h});
+      pts.push({x, y:y+h});
+      for(let i=verts.length-1;i>=0;i--) {
+        const v=verts[i];
+        pts.push({x:x-v.dx, y:y+v.y});
+      }
+      p.points = pts;
+    });
+    lines.forEach(l => { l.x1-=minX; l.x2-=minX; l.y1-=minY; l.y2-=minY; });
+    return {width, height, parts, lines};
+  }
+
+  function drawConnector(part, pos, type, offX, offY) {
+    if (!CONNECTOR_TEMPLATE || !type || type === 'none') return;
+    const scale = (part.width * 0.8) / CONNECTOR_TEMPLATE.width;
+    const w = CONNECTOR_TEMPLATE.width * scale;
+    const h = CONNECTOR_TEMPLATE.height * scale;
+    const flip = (pos === 'top' && type === 'PIN') ||
+                 (pos === 'bottom' && type === 'BOX');
+    const baseX = offX + (part.x || 0) + (part.width - w) / 2;
+    let baseY;
+    if (pos === 'top') baseY = type === 'PIN' ? offY + (part.y || 0) - h : offY + (part.y || 0);
+    else baseY = type === 'PIN' ? offY + (part.y || 0) + part.height : offY + (part.y || 0) + part.height - h;
+    const offsetY = flip ? baseY + h : baseY;
+    const scaleY = flip ? -scale : scale;
+
+    CONNECTOR_TEMPLATE.parts.forEach(tp => {
+      const pts = tp.points.map(pt => ({
+        x: baseX + pt.x * scale,
+        y: offsetY + pt.y * scaleY
+      }));
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.closePath();
+      ctx.fillStyle = type === 'BOX' ? '#b3b3b3' : '#cccccc';
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = type === 'BOX' ? '#555' : '#000';
+      if (type === 'BOX') ctx.setLineDash([4,2]); else ctx.setLineDash([]);
+      ctx.fill();
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+
+    CONNECTOR_TEMPLATE.lines.forEach(l => {
+      const x1 = baseX + l.x1 * scale;
+      const x2 = baseX + l.x2 * scale;
+      const y1 = offsetY + l.y1 * scaleY;
+      const y2 = offsetY + l.y2 * scaleY;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = type === 'BOX' ? '#555' : '#000';
+      if (type === 'BOX') ctx.setLineDash([4,2]); else ctx.setLineDash([]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+  }
+
   function drawPart(p, offX, offY) {
     const pts = partPolygonPoints(p, offX, offY);
     if (!pts.length) return;
@@ -386,6 +492,10 @@ if (bhaCanvas) {
   function drawComponent(comp, x, y) {
     comp.parts.forEach(p => drawPart(p, x, y));
     drawShapes(comp, x, y);
+    comp.parts.forEach(p => {
+      drawConnector(p, 'top', p.topConnector, x, y);
+      drawConnector(p, 'bottom', p.bottomConnector, x, y);
+    });
   }
 
   function getComponentBounds(comp) {
@@ -396,6 +506,26 @@ if (bhaCanvas) {
         minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
         maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
       });
+      if (CONNECTOR_TEMPLATE) {
+        if (p.topConnector && p.topConnector !== 'none') {
+          const scale = (p.width * 0.8) / CONNECTOR_TEMPLATE.width;
+          const w = CONNECTOR_TEMPLATE.width * scale;
+          const h = CONNECTOR_TEMPLATE.height * scale;
+          const x = (p.x || 0) + (p.width - w)/2;
+          const y = (p.y || 0) - (p.topConnector === 'PIN' ? h : 0);
+          minX = Math.min(minX, x); minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x + w); maxY = Math.max(maxY, y + h);
+        }
+        if (p.bottomConnector && p.bottomConnector !== 'none') {
+          const scale = (p.width * 0.8) / CONNECTOR_TEMPLATE.width;
+          const w = CONNECTOR_TEMPLATE.width * scale;
+          const h = CONNECTOR_TEMPLATE.height * scale;
+          const x = (p.x || 0) + (p.width - w)/2;
+          const y = (p.y || 0) + p.height - (p.bottomConnector === 'BOX' ? h : 0);
+          minX = Math.min(minX, x); minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x + w); maxY = Math.max(maxY, y + h);
+        }
+      }
     });
     (comp.drawnShapes || []).forEach(s => {
       if (s.type === 'line') {

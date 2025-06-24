@@ -261,6 +261,7 @@ if (bhaCanvas) {
   const ctx = bhaCanvas.getContext('2d');
   let placed = [];
   const menu = document.getElementById('contextMenu');
+  const colorPicker = document.getElementById('colorPicker');
   let contextItem = null;
 
   const nameInput = document.getElementById('assyTitle');
@@ -318,6 +319,7 @@ if (bhaCanvas) {
   let dragOffY = 0;
 
   bhaCanvas.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
     const rect = bhaCanvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -377,6 +379,7 @@ if (bhaCanvas) {
 
     menu.style.left = e.clientX + 'px';
     menu.style.top = e.clientY + 'px';
+    colorPicker.style.display = 'none';
 
     const topEnabled = hasTopThread(contextItem.comp);
     const bottomEnabled = hasBottomThread(contextItem.comp);
@@ -388,15 +391,25 @@ if (bhaCanvas) {
     menu.style.display = 'block';
   });
 
-  window.addEventListener('click', () => { menu.style.display = 'none'; });
+  window.addEventListener('click', e => {
+    if (e.target !== colorPicker) colorPicker.style.display = 'none';
+    menu.style.display = 'none';
+  });
 
   document.getElementById('changeColorMenu').addEventListener('click', () => {
     if (!contextItem) return;
-    const c = prompt('Enter colour (e.g., #ff0000):', contextItem.comp.parts[0].color || '#cccccc');
-    if (c) {
-      contextItem.comp.parts.forEach(p => { p.color = c; });
+    const c = contextItem.comp.parts[0].color || '#cccccc';
+    colorPicker.value = c;
+    colorPicker.style.left = menu.style.left;
+    colorPicker.style.top = menu.style.top;
+    colorPicker.style.display = 'block';
+    colorPicker.oninput = (e) => {
+      const v = e.target.value;
+      contextItem.comp.parts.forEach(p => { p.color = v; });
       redraw();
-    }
+    };
+    colorPicker.onchange = () => { colorPicker.style.display = 'none'; };
+    colorPicker.focus();
     menu.style.display = 'none';
   });
 
@@ -512,18 +525,21 @@ if (bhaCanvas) {
   }
 
   function hasTopThread(comp) {
-    return comp.parts.some(p => p.topConnector && p.topConnector !== 'none');
+    return comp.parts.some(p =>
+      p.topConnector && p.topConnector !== 'none' && p.topConnectorVisible !== false);
   }
 
   function hasBottomThread(comp) {
-    return comp.parts.some(p => p.bottomConnector && p.bottomConnector !== 'none');
+    return comp.parts.some(p =>
+      p.bottomConnector && p.bottomConnector !== 'none' && p.bottomConnectorVisible !== false);
   }
 
   function toggleThread(comp, pos) {
     const prop = pos === 'top' ? 'topConnector' : 'bottomConnector';
+    const vis = prop + 'Visible';
     comp.parts.forEach(p => {
-      if (p[prop] !== undefined) {
-        p[prop] = (p[prop] && p[prop] !== 'none') ? 'none' : 'PIN';
+      if (p[prop] && p[prop] !== 'none') {
+        p[vis] = p[vis] === false ? true : false;
       }
     });
   }
@@ -557,7 +573,8 @@ if (bhaCanvas) {
       ctx.moveTo(pts[0].x, pts[0].y);
       for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
       ctx.closePath();
-      ctx.fillStyle = type === 'BOX' ? '#b3b3b3' : '#cccccc';
+      const base = type === 'BOX' ? '#b3b3b3' : '#cccccc';
+      ctx.fillStyle = cylinderGradient(ctx, base, 0, CONNECTOR_TEMPLATE.width);
       if (type === 'BOX') {
         ctx.strokeStyle = '#555';
         ctx.lineWidth = 1;
@@ -661,9 +678,9 @@ if (bhaCanvas) {
     drawShapes(comp, x, y);
     comp.parts.forEach(p => {
       const part = { x: x + (p.x || 0), y: y + (p.y || 0), width: p.width, height: p.height };
-      if (p.topConnector && p.topConnector !== 'none')
+      if (p.topConnector && p.topConnector !== 'none' && p.topConnectorVisible !== false)
         drawConnector(part, 'top', p.topConnector);
-      if (p.bottomConnector && p.bottomConnector !== 'none')
+      if (p.bottomConnector && p.bottomConnector !== 'none' && p.bottomConnectorVisible !== false)
         drawConnector(part, 'bottom', p.bottomConnector);
     });
     ctx.restore();

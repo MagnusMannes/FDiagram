@@ -4,6 +4,39 @@ let currentAssembly = [];
 let currentAssemblyIdx = 0;
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
+let CONNECTOR_TEMPLATE = null;
+
+// built-in fallback for connector graphics
+const THREAD_TEMPLATE_DATA = {
+  "parts": [
+    {"x":1008,"y":20,"width":504,"height":59.71653543307087,"color":"#cccccc","topConnector":"none","bottomConnector":"none","special":false,"specialForms":[],"symVertices":[{"y":0,"dx":0},{"y":59.71653543307087,"dx":0}]},
+    {"x":1044,"y":79.71653543307087,"width":432,"height":371.99999999999994,"color":"#cccccc","topConnector":"none","bottomConnector":"none","special":false,"specialForms":[],"symVertices":[{"y":0,"dx":36},{"y":371.99999999999994,"dx":0}]}
+  ],
+  "drawnShapes": [
+    {"type":"line","width":2,"parentIndex":1,"x1":1042.5795454545455,"y1":78.54545454545455,"x2":1507.7045454545455,"y2":117.04545454545456,"relX1":-0.00328808922558913,"relY1":-0.003148066902194428,"relX2":1.0733901515151516,"relY2":0.1003465567537196},
+    {"type":"line","width":2,"parentIndex":1,"x1":1010.125,"y1":110.375,"x2":1504,"y2":153,"relX1":-0.07841435185185185,"relY1":0.08241522733045466,"relX2":1.0648148148148149,"relY2":0.196998560663788},
+    {"type":"line","width":2,"parentIndex":1,"x1":1015.5476190476192,"y1":147.625,"x2":1501.4464285714287,"y2":188.00000000000003,"relX1":-0.06586199294532603,"relY1":0.1825496359326052,"relX2":1.05890376984127,"relY2":0.29108458216916444},
+    {"type":"line","width":2,"parentIndex":1,"x1":1022.9999999999998,"y1":225.5,"x2":1493.9999999999998,"y2":268.6428571428571,"relX1":-0.04861111111111164,"relY1":0.3918910337820676,"relX2":1.041666666666666,"relY2":0.507866456209103},
+    {"type":"line","width":2,"parentIndex":1,"x1":1025.2440476190475,"y1":262.4761904761905,"x2":1490.529761904762,"y2":304.6190476190476,"relX1":-0.0434165564373901,"relY1":0.49128939527720333,"relX2":1.0336337081128748,"relY2":0.6045766456612279},
+    {"type":"line","width":2,"parentIndex":1,"x1":1029.5178571428569,"y1":301.1071428571429,"x2":1486.0892857142856,"y2":348.29761904761904,"relX1":-0.03352347883597944,"relY1":0.5951360414625592,"relX2":1.0233548280423277,"relY2":0.7219921602541618},
+    {"type":"line","width":2,"parentIndex":1,"x1":1033.9999999999998,"y1":339,"x2":1481.1428571428569,"y2":388.3333333333333,"relX1":-0.023148148148148674,"relY1":0.6969985606637881,"relX2":1.0119047619047612,"relY2":0.8296150481189852},
+    {"type":"line","width":2,"parentIndex":1,"x1":1036.0119047619046,"y1":376.62499999999994,"x2":1477.2023809523807,"y2":427.3869047619047,"relX1":-0.018490961199294935,"relY1":0.7981410337820675,"relX2":1.002783289241622,"relY2":0.9345977670129944},
+    {"type":"line","width":2,"parentIndex":1,"x1":1018.5535714285712,"y1":186.25000000000006,"x2":1496.7499999999998,"y2":227.87500000000006,"relX1":-0.05890376984127033,"relY1":0.2863802810938957,"relX2":1.0480324074074068,"relY2":0.3982754423842183},
+    {"type":"line","width":2,"parentIndex":1,"x1":1039.2819264069265,"y1":415.29166666666663,"x2":1393.922619047619,"y2":451.1488095238094,"relX1":-0.010921466650633196,"relY1":0.9020836861118167,"relX2":0.8100060626102292,"relY2":0.9984738550826306}
+  ]
+};
+
+CONNECTOR_TEMPLATE = preprocessConnectorTemplate(THREAD_TEMPLATE_DATA);
+
+// attempt to load updated thread template
+fetch('fdrawingv1/threads.json')
+  .then(r => r.json())
+  .then(d => {
+    CONNECTOR_TEMPLATE = preprocessConnectorTemplate(d);
+    if (typeof redraw === 'function') redraw();
+  })
+  .catch(() => { if (typeof redraw === 'function') redraw(); });
+
 loadSession();
 
 function loadSession() {
@@ -342,6 +375,130 @@ if (bhaCanvas) {
     return rgbToHex(nr, ng, nb);
   }
 
+  function preprocessConnectorTemplate(data) {
+    const parts = [];
+    const lines = [];
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+
+    (data.parts || []).forEach((p) => {
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x + p.width);
+      maxY = Math.max(maxY, p.y + p.height);
+      parts.push({
+        x: p.x,
+        y: p.y,
+        width: p.width,
+        height: p.height,
+        verts: (p.symVertices || []).slice().sort((a, b) => a.y - b.y),
+      });
+    });
+
+    (data.drawnShapes || []).forEach((s) => {
+      if (s.type === 'line') {
+        minX = Math.min(minX, s.x1, s.x2);
+        maxX = Math.max(maxX, s.x1, s.x2);
+        minY = Math.min(minY, s.y1, s.y2);
+        maxY = Math.max(maxY, s.y1, s.y2);
+        lines.push({ x1: s.x1, y1: s.y1, x2: s.x2, y2: s.y2 });
+      }
+    });
+
+    const width = maxX - minX;
+    const height = maxY - minY;
+
+    parts.forEach((p) => {
+      p.x -= minX;
+      p.y -= minY;
+      const x = p.x;
+      const y = p.y;
+      const w = p.width;
+      const h = p.height;
+      const verts = p.verts;
+      const pts = [];
+      pts.push({ x, y });
+      pts.push({ x: x + w, y });
+      verts.forEach((v) => {
+        pts.push({ x: x + w + v.dx, y: y + v.y });
+      });
+      pts.push({ x: x + w, y: y + h });
+      pts.push({ x, y: y + h });
+      for (let i = verts.length - 1; i >= 0; i--) {
+        const v = verts[i];
+        pts.push({ x: x - v.dx, y: y + v.y });
+      }
+      p.points = pts;
+    });
+
+    lines.forEach((l) => {
+      l.x1 -= minX;
+      l.y1 -= minY;
+      l.x2 -= minX;
+      l.y2 -= minY;
+    });
+
+    return { width, height, parts, lines };
+  }
+
+  function drawConnector(part, pos, type) {
+    if (!CONNECTOR_TEMPLATE) return;
+    const scale = (part.width * 0.8) / CONNECTOR_TEMPLATE.width;
+    const w = CONNECTOR_TEMPLATE.width * scale;
+    const h = CONNECTOR_TEMPLATE.height * scale;
+    const flip =
+      (pos === 'top' && type === 'PIN') ||
+      (pos === 'bottom' && type === 'BOX');
+    const x0 = part.x + (part.width - w) / 2;
+    let y0;
+    if (pos === 'top') y0 = type === 'PIN' ? part.y - h : part.y;
+    else y0 = type === 'PIN' ? part.y + part.height : part.y + part.height - h;
+
+    ctx.save();
+    ctx.translate(x0, y0);
+    if (flip) {
+      ctx.translate(0, h);
+      ctx.scale(scale, -scale);
+    } else {
+      ctx.scale(scale, scale);
+    }
+
+    CONNECTOR_TEMPLATE.parts.forEach((p) => {
+      const pts = p.points;
+      if (!pts.length) return;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.closePath();
+      ctx.fillStyle = type === 'BOX' ? '#b3b3b3' : '#cccccc';
+      if (type === 'BOX') {
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 2]);
+        ctx.fill();
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        ctx.fill();
+      }
+    });
+
+    CONNECTOR_TEMPLATE.lines.forEach((l) => {
+      ctx.beginPath();
+      ctx.moveTo(l.x1, l.y1);
+      ctx.lineTo(l.x2, l.y2);
+      ctx.strokeStyle = type === 'BOX' ? '#555' : '#000';
+      ctx.lineWidth = 2;
+      if (type === 'BOX') ctx.setLineDash([4, 2]);
+      ctx.stroke();
+      if (type === 'BOX') ctx.setLineDash([]);
+    });
+
+    ctx.restore();
+  }
+
   function cylinderGradient(ctx, color, x, w) {
     const grad = ctx.createLinearGradient(x, 0, x + w, 0);
     grad.addColorStop(0, darkenColor(color, 0.25));
@@ -410,6 +567,13 @@ if (bhaCanvas) {
   function drawComponent(comp, x, y) {
     comp.parts.forEach(p => drawPart(p, x, y));
     drawShapes(comp, x, y);
+    comp.parts.forEach(p => {
+      const part = { x: x + (p.x || 0), y: y + (p.y || 0), width: p.width, height: p.height };
+      if (p.topConnector && p.topConnector !== 'none')
+        drawConnector(part, 'top', p.topConnector);
+      if (p.bottomConnector && p.bottomConnector !== 'none')
+        drawConnector(part, 'bottom', p.bottomConnector);
+    });
   }
 
   function getComponentBounds(comp) {
@@ -420,6 +584,16 @@ if (bhaCanvas) {
         minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
         maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
       });
+      if (CONNECTOR_TEMPLATE) {
+        if (p.topConnector === 'PIN') {
+          const scale = (p.width * 0.8) / CONNECTOR_TEMPLATE.width;
+          minY = Math.min(minY, p.y - CONNECTOR_TEMPLATE.height * scale);
+        }
+        if (p.bottomConnector === 'PIN') {
+          const scale = (p.width * 0.8) / CONNECTOR_TEMPLATE.width;
+          maxY = Math.max(maxY, p.y + p.height + CONNECTOR_TEMPLATE.height * scale);
+        }
+      }
     });
     (comp.drawnShapes || []).forEach(s => {
       if (s.type === 'line') {

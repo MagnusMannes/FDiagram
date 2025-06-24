@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BHA Builder</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="builder">
+  <section class="view builder">
+    <aside id="palette" class="sidebar">
+      <h2>Items</h2>
+      <div class="tool-item" draggable="true" data-tool='{"name":"Drill Bit","length":0.5,"od":8.5}'>
+        Drill Bit<br><small>8.5"&nbsp;/&nbsp;0.5 ft</small>
+      </div>
+      <div class="tool-item" draggable="true" data-tool='{"name":"Stabilizer","length":5,"od":6.375}'>
+        Stabilizer<br><small>Ø 6.375"&nbsp;/&nbsp;5 ft</small>
+      </div>
+      <div class="tool-item" draggable="true" data-tool='{"name":"Jar","length":10,"od":3}'>
+        Jar<br><small>Ø 3"&nbsp;/&nbsp;10 ft</small>
+      </div>
+    </aside>
+    <main id="dropZone" class="dropzone" ondragover="event.preventDefault()">
+      <h2 id="assyTitle">Assy 1</h2>
+      <button id="backAssyBtn" class="secondary back-btn">Back to Assemblies</button>
+    </main>
+  </section>
+  <script src="app.js"></script>
+</body>
+</html>

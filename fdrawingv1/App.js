@@ -399,6 +399,30 @@ document.getElementById("deleteShapeMenu").addEventListener("click", () => {
   contextPart = null;
 });
 
+document.getElementById("toggleTopThread").addEventListener("click", () => {
+  if (contextPart) toggleThread(contextPart, "top");
+  menu.style.display = "none";
+  contextPart = null;
+});
+
+document.getElementById("toggleBottomThread").addEventListener("click", () => {
+  if (contextPart) toggleThread(contextPart, "bottom");
+  menu.style.display = "none";
+  contextPart = null;
+});
+
+document.getElementById("flipMenu").addEventListener("click", () => {
+  if (contextPart) toggleFlip(contextPart);
+  menu.style.display = "none";
+  contextPart = null;
+});
+
+document.getElementById("changeColorMenu").addEventListener("click", () => {
+  if (contextPart) changePartColor(contextPart);
+  menu.style.display = "none";
+  contextPart = null;
+});
+
 document.getElementById("toggle3dMenu").addEventListener("click", () => {
   if (contextPart) {
     togglePart3D(contextPart);
@@ -1467,6 +1491,43 @@ function toggleConnector3D(conn) {
   else enableConnector3D(conn);
 }
 
+function toggleThread(part, pos) {
+  const prop = pos === 'top' ? 'topConnector' : 'bottomConnector';
+  const label = pos === 'top' ? part.topLabel : part.bottomLabel;
+  if (part[prop] && part[prop] !== 'none') {
+    part[prop] = 'none';
+    removeConnector(part, pos);
+    label.textContent = '';
+    updateConnectorLabelClass(label, 'none');
+  } else {
+    part[prop] = 'PIN';
+    createConnector(part, pos, 'PIN');
+    label.textContent = labelFor('PIN');
+    updateConnectorLabelClass(label, 'PIN');
+  }
+}
+
+function toggleFlip(part) {
+  part.flipped = !part.flipped;
+  if (part.flipped) {
+    const cx = part.x + part.width / 2;
+    const cy = part.y + part.height / 2;
+    part.g.setAttribute('transform', `rotate(180 ${cx} ${cy})`);
+  } else {
+    part.g.removeAttribute('transform');
+  }
+  if (part.connectors) {
+    updateConnectors(part);
+  }
+}
+
+function changePartColor(part) {
+  const c = prompt('Enter colour (e.g., #ff0000 or red):', part.color);
+  if (!c) return;
+  part.color = c;
+  applyPartGradient(part);
+}
+
 function stripShape(s) {
   const base = { type: s.type, width: s.width };
   if (s.parentPart) {
@@ -2016,6 +2077,23 @@ function showContextMenu(e, part = null, shape = null, connector = null) {
     shape && shape.parentPart ? 'block' : 'none';
   document.getElementById('deleteShapeMenu').style.display = shape ? 'block' : 'none';
   document.getElementById('toggle3dMenu').style.display = part || connector ? 'block' : 'none';
+  if (part) {
+    const topEnabled = part.topConnector && part.topConnector !== 'none';
+    const bottomEnabled = part.bottomConnector && part.bottomConnector !== 'none';
+    const tt = document.getElementById('toggleTopThread');
+    const tb = document.getElementById('toggleBottomThread');
+    tt.style.display = 'block';
+    tb.style.display = 'block';
+    tt.textContent = topEnabled ? 'Disable uphole thread' : 'Enable uphole thread';
+    tb.textContent = bottomEnabled ? 'Disable downhole thread' : 'Enable downhole thread';
+    document.getElementById('flipMenu').style.display = 'block';
+    document.getElementById('changeColorMenu').style.display = 'block';
+  } else {
+    document.getElementById('toggleTopThread').style.display = 'none';
+    document.getElementById('toggleBottomThread').style.display = 'none';
+    document.getElementById('flipMenu').style.display = 'none';
+    document.getElementById('changeColorMenu').style.display = 'none';
+  }
   const rect = canvasArea.getBoundingClientRect();
   menu.style.left = `${e.clientX - rect.left + canvasArea.scrollLeft}px`;
   menu.style.top = `${e.clientY - rect.top + canvasArea.scrollTop}px`;

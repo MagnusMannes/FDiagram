@@ -14,6 +14,10 @@ button:hover{filter:brightness(.95);}
 .view{width:100vw;height:100vh;}
 .centered{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
 .builder{display:flex;}
+.list{width:260px;text-align:left;margin-bottom:1rem;}
+.list button{margin:0.3rem 0;}
+.list div{display:flex;justify-content:space-between;}
+.back-btn{margin-top:1rem;}
 
 /*  ─── Sidebar (Item Palette) ──────────────────────────── */
 .sidebar{width:260px;background:#fff;border-right:1px solid #dcdce0;padding:1rem;overflow-y:auto;}

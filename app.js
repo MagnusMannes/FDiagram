@@ -1,20 +1,27 @@
 /* ──────────  View Switching  ────────── */
-const mainPage    = document.getElementById('main-page');
-const builderPage = document.getElementById('builder-page');
-let   currentName      = null;
-let   currentAssembly  = [];
+const mainPage     = document.getElementById('main-page');
+const assemblyPage = document.getElementById('assembly-page');
+const loadPage     = document.getElementById('load-page');
+const builderPage  = document.getElementById('builder-page');
+const assemblyList = document.getElementById('assemblyList');
+const loadList     = document.getElementById('loadList');
+const assyTitle    = document.getElementById('assyTitle');
+const bhaTitle     = document.getElementById('bhaTitle');
+
+let   currentBha         = {name:'', assemblies:[]};
+let   currentAssembly    = [];
+let   currentAssemblyIdx = 0;
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
 document.getElementById('newBtn').onclick = async () => {
   const name = prompt('Enter name for new BHA');
   if(!name) return;
-  currentName = name.trim();
-  currentAssembly = [];
-  loadAssembly(currentAssembly);
+  currentBha = {name: name.trim(), assemblies: []};
   saveCurrentBha();
   await backupFile();
-  mainPage.hidden    = true;
-  builderPage.hidden = false;
+  renderAssemblyList();
+  mainPage.hidden     = true;
+  assemblyPage.hidden = false;
 };
 
 document.getElementById('historyBtn').onclick = () => {
@@ -23,23 +30,30 @@ document.getElementById('historyBtn').onclick = () => {
     alert('No stored BHAs');
     return;
   }
-  const choice = prompt('Stored BHAs:\n' + names.join('\n') + '\nEnter name to load:');
-  if(!choice) return;
-  const item = localStorage.getItem('bha-' + choice.trim());
-  if(!item){
-    alert('BHA not found');
-    return;
-  }
-  try {
-    const obj = JSON.parse(item);
-    currentName = obj.name;
-    currentAssembly = obj.assembly || [];
-    loadAssembly(currentAssembly);
-    mainPage.hidden    = true;
-    builderPage.hidden = false;
-  } catch(e){
-    alert('Failed to load BHA');
-  }
+  loadList.innerHTML = '';
+  names.forEach(name => {
+    const btn = document.createElement('button');
+    btn.className = 'primary';
+    btn.textContent = name;
+    btn.onclick = () => {
+      const item = localStorage.getItem('bha-' + name);
+      if(!item){ alert('BHA not found'); return; }
+      try{
+        const obj = JSON.parse(item);
+        currentBha = {
+          name: obj.name,
+          assemblies: obj.assemblies || [obj.assembly || []]
+        };
+        renderAssemblyList();
+        loadPage.hidden     = true;
+        assemblyPage.hidden = false;
+        mainPage.hidden     = true;
+      }catch(e){ alert('Failed to load BHA'); }
+    };
+    loadList.appendChild(btn);
+  });
+  mainPage.hidden = true;
+  loadPage.hidden = false;
 };
 
 document.getElementById('loadBtn').onclick = () =>
@@ -54,15 +68,16 @@ document.getElementById('fileInput').onchange = (e) => {
     try {
       const data = JSON.parse(reader.result);
       if(Array.isArray(data)){
-        currentAssembly = data;
-        currentName = 'Imported BHA';
+        currentBha = {name:'Imported BHA', assemblies:[data]};
       }else{
-        currentName = data.name || 'Imported BHA';
-        currentAssembly = data.assembly || [];
+        currentBha = {
+          name: data.name || 'Imported BHA',
+          assemblies: data.assemblies || [data.assembly || []]
+        };
       }
-      loadAssembly(currentAssembly);
-      mainPage.hidden    = true;
-      builderPage.hidden = false;
+      renderAssemblyList();
+      mainPage.hidden     = true;
+      assemblyPage.hidden = false;
     } catch(err){ alert('Invalid JSON'); }
   };
   reader.readAsText(file);
@@ -83,6 +98,7 @@ dropZone.addEventListener('drop', ev => {
   if (!json) return;
   const tool = JSON.parse(json);
   currentAssembly.push(tool);
+  currentBha.assemblies[currentAssemblyIdx] = currentAssembly;
   addComponent(tool);
   saveCurrentBha();
 });
@@ -129,23 +145,23 @@ function getBhaNames(){
 }
 
 function saveCurrentBha(){
-  if(!currentName) return;
-  const data = {name: currentName, assembly: currentAssembly, savedAt: Date.now()};
-  localStorage.setItem('bha-' + currentName, JSON.stringify(data));
+  if(!currentBha.name) return;
+  const data = {name: currentBha.name, assemblies: currentBha.assemblies, savedAt: Date.now()};
+  localStorage.setItem('bha-' + currentBha.name, JSON.stringify(data));
   const names = getBhaNames();
-  if(!names.includes(currentName)){
-    names.push(currentName);
+  if(!names.includes(currentBha.name)){
+    names.push(currentBha.name);
     localStorage.setItem('bha-names', JSON.stringify(names));
   }
 }
 
 async function backupFile(){
-  const data = {name: currentName, assembly: currentAssembly};
+  const data = {name: currentBha.name, assemblies: currentBha.assemblies};
   const json = JSON.stringify(data, null, 2);
   if(window.showSaveFilePicker){
     try{
       const handle = await window.showSaveFilePicker({
-        suggestedName: currentName + '.json',
+        suggestedName: currentBha.name + '.json',
         types:[{description:'JSON', accept:{'application/json':['.json']}}]
       });
       const writable = await handle.createWritable();
@@ -158,7 +174,64 @@ async function backupFile(){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = currentName + '.json';
+  a.download = currentBha.name + '.json';
   a.click();
   URL.revokeObjectURL(url);
 }
+
+/* ──────────  Assembly Menu Helpers  ────────── */
+function renderAssemblyList(){
+  bhaTitle.textContent = currentBha.name;
+  assemblyList.innerHTML = '';
+  currentBha.assemblies.forEach((assy, idx) => {
+    const row  = document.createElement('div');
+    const edit = document.createElement('button');
+    edit.className = 'primary';
+    edit.textContent = 'Assy ' + (idx + 1);
+    edit.onclick = () => {
+      currentAssemblyIdx = idx;
+      loadAssembly(assy);
+      assyTitle.textContent = 'Assy ' + (idx + 1);
+      assemblyPage.hidden = true;
+      builderPage.hidden  = false;
+    };
+    const del  = document.createElement('button');
+    del.className = 'secondary';
+    del.textContent = 'Delete';
+    del.onclick = () => {
+      currentBha.assemblies.splice(idx,1);
+      renderAssemblyList();
+      saveCurrentBha();
+    };
+    row.appendChild(edit);
+    row.appendChild(del);
+    assemblyList.appendChild(row);
+  });
+}
+
+document.getElementById('addAssyBtn').onclick = () => {
+  currentAssemblyIdx = currentBha.assemblies.length;
+  currentAssembly = [];
+  loadAssembly(currentAssembly);
+  assyTitle.textContent = 'Assy ' + (currentAssemblyIdx + 1);
+  assemblyPage.hidden = true;
+  builderPage.hidden  = false;
+};
+
+document.getElementById('backAssyBtn').onclick = () => {
+  currentBha.assemblies[currentAssemblyIdx] = [...currentAssembly];
+  saveCurrentBha();
+  renderAssemblyList();
+  builderPage.hidden  = true;
+  assemblyPage.hidden = false;
+};
+
+document.getElementById('backMainBtn').onclick = () => {
+  assemblyPage.hidden = true;
+  mainPage.hidden     = false;
+};
+
+document.getElementById('loadBackBtn').onclick = () => {
+  loadPage.hidden = true;
+  mainPage.hidden = false;
+};

@@ -1200,6 +1200,7 @@ let resizing = false,
   resizePart = null,
   startVertYs = null;
 function startResize(e, part) {
+  if (e.button && e.button !== 0) return;
   e.preventDefault();
   saveState();
   resizing = true;
@@ -1282,6 +1283,7 @@ let hResizing = false,
   hDir = "left",
   centerX = 0;
 function startHResize(e, part, dir) {
+  if (e.button && e.button !== 0) return;
   e.preventDefault();
   saveState();
   hResizing = true;
@@ -1742,6 +1744,7 @@ function toggleHandles(part, show) {
 
 let vertexDrag = null;
 function startVertexDrag(e, part, vertex, side) {
+  if (e.button && e.button !== 0) return;
   e.preventDefault();
   saveState();
   vertexDrag = { part, vertex, side, startX: e.clientX, startDx: vertex.dx };
@@ -2223,6 +2226,7 @@ function addShapeEventListeners(shape) {
 
 let shapeDrag = null;
 function startShapeDrag(e, shape) {
+  if (e.button && e.button !== 0) return;
   e.preventDefault();
   saveState();
   const rect = canvas.getBoundingClientRect();

@@ -257,3 +257,40 @@ async function backupFile() {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+function renderAssemblyList() {
+  const title = document.getElementById('bhaTitle');
+  const list = document.getElementById('assemblyList');
+  if (!list) return;
+  if (title) title.textContent = currentBha.name || 'BHA';
+  list.innerHTML = '';
+  currentBha.assemblies.forEach((assy, idx) => {
+    const row = document.createElement('div');
+
+    const edit = document.createElement('button');
+    edit.className = 'primary';
+    edit.textContent = 'Assembly ' + (idx + 1);
+    edit.onclick = () => {
+      currentAssemblyIdx = idx;
+      storeSession();
+      location.href = 'builder.html';
+    };
+
+    const del = document.createElement('button');
+    del.className = 'secondary';
+    del.textContent = 'Delete';
+    del.onclick = () => {
+      currentBha.assemblies.splice(idx, 1);
+      if (currentAssemblyIdx >= currentBha.assemblies.length) {
+        currentAssemblyIdx = currentBha.assemblies.length - 1;
+      }
+      saveCurrentBha();
+      storeSession();
+      renderAssemblyList();
+    };
+
+    row.appendChild(edit);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}

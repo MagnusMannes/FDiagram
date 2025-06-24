@@ -206,7 +206,14 @@ if (bhaCanvas) {
     const json = ev.dataTransfer.getData('application/json');
     if (!json) return;
     const comp = normalizeComponent(JSON.parse(json));
-    placed.push({ comp, x: ev.offsetX, y: ev.offsetY });
+
+    const rect = bhaCanvas.getBoundingClientRect();
+    const scaleX = bhaCanvas.width / rect.width;
+    const scaleY = bhaCanvas.height / rect.height;
+    const x = (ev.clientX - rect.left) * scaleX;
+    const y = (ev.clientY - rect.top) * scaleY;
+
+    placed.push({ comp, x, y });
     redraw();
   });
 

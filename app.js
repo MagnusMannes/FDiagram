@@ -257,61 +257,56 @@ if (bhaCanvas) {
   }
   redraw();
 
-  function renderForPrint(ctx, scale) {
-    const width = bhaCanvas.width * scale;
-    const height = bhaCanvas.height * scale;
-    const margin = 20 * scale;
-    ctx.lineWidth = 2 * scale;
-    ctx.strokeStyle = '#000';
-    ctx.clearRect(0, 0, width, height);
-    ctx.strokeRect(0, 0, width, height);
-    ctx.strokeRect(margin, margin, width - margin * 2, height - margin * 2);
+  function escapeSvg(text) {
+    return String(text || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
 
-    const tbW = 270 * scale;
-    const tbH = 80 * scale;
+  function buildSvg() {
+    const width = bhaCanvas.width;
+    const height = bhaCanvas.height;
+    const margin = 20;
+    const tbW = 270;
+    const tbH = 80;
     const smallRow = tbH / 4;
-    const titleCol = 50 * scale;
+    const titleCol = 50;
     const x = width - margin - tbW;
     const y = height - margin - tbH;
-    ctx.strokeRect(x, y, tbW, tbH);
-    ctx.beginPath();
-    ctx.moveTo(x, y + smallRow);
-    ctx.lineTo(x + tbW, y + smallRow);
-    ctx.moveTo(x + titleCol, y);
-    ctx.lineTo(x + titleCol, y + smallRow);
-    ctx.stroke();
 
-    ctx.font = (12 * scale) + 'px sans-serif';
-    ctx.fillStyle = '#000';
-    ctx.fillText('Title:', x + 4 * scale, y + 14 * scale);
-    ctx.fillText(assyObj.name, x + titleCol + 4 * scale, y + 14 * scale);
-    ctx.fillText('Comment:', x + 4 * scale, y + smallRow + 14 * scale);
+    const parts = [];
+    parts.push(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`
+    );
+    parts.push(`<rect x="0" y="0" width="${width}" height="${height}" fill="none" stroke="#000" stroke-width="2"/>`);
+    parts.push(`<rect x="${margin}" y="${margin}" width="${width - margin * 2}" height="${height - margin * 2}" fill="none" stroke="#000" stroke-width="2"/>`);
+    parts.push(`<rect x="${x}" y="${y}" width="${tbW}" height="${tbH}" fill="none" stroke="#000" stroke-width="2"/>`);
+    parts.push(`<line x1="${x}" y1="${y + smallRow}" x2="${x + tbW}" y2="${y + smallRow}" stroke="#000" stroke-width="2"/>`);
+    parts.push(`<line x1="${x + titleCol}" y1="${y}" x2="${x + titleCol}" y2="${y + smallRow}" stroke="#000" stroke-width="2"/>`);
+
+    parts.push(`<text x="${x + 4}" y="${y + 14}" font-family="sans-serif" font-size="12">Title:</text>`);
+    parts.push(`<text x="${x + titleCol + 4}" y="${y + 14}" font-family="sans-serif" font-size="12">${escapeSvg(assyObj.name)}</text>`);
+    parts.push(`<text x="${x + 4}" y="${y + smallRow + 14}" font-family="sans-serif" font-size="12">Comment:</text>`);
 
     placed.forEach(item => {
       item.comp.parts.forEach(p => {
-        ctx.fillStyle = p.color || '#ccc';
-        const dx = (item.x + (p.x || 0)) * scale;
-        const dy = (item.y + (p.y || 0)) * scale;
-        const dw = p.width * scale;
-        const dh = p.height * scale;
-        ctx.fillRect(dx, dy, dw, dh);
-        ctx.strokeStyle = '#000';
-        ctx.strokeRect(dx, dy, dw, dh);
+        const dx = item.x + (p.x || 0);
+        const dy = item.y + (p.y || 0);
+        parts.push(`<rect x="${dx}" y="${dy}" width="${p.width}" height="${p.height}" fill="${p.color || '#ccc'}" stroke="#000"/>`);
       });
     });
+
+    parts.push('</svg>');
+    return parts.join('');
   }
 
   document.getElementById('printPdfBtn').onclick = () => {
     const now = new Date();
     const stamp = now.toISOString().replace(/[:T]/g, '-').split('.')[0];
     const fileName = (assyObj.name || 'assembly') + '_' + stamp;
-
-    const scale = 3; // roughly 300 DPI for A4
-    const pCanvas = document.createElement('canvas');
-    pCanvas.width = bhaCanvas.width * scale;
-    pCanvas.height = bhaCanvas.height * scale;
-    renderForPrint(pCanvas.getContext('2d'), scale);
-    const imgData = pCanvas.toDataURL('image/png');
+    const svgData = buildSvg();
 
     const frame = document.createElement('iframe');
     frame.style.position = 'fixed';
@@ -324,9 +319,9 @@ if (bhaCanvas) {
     const doc = frame.contentDocument || frame.contentWindow.document;
     doc.open();
     doc.write('<html><head><title>' + fileName + '</title>');
-    doc.write('<style>@page{margin:0;}body{margin:0;}img{width:100%;height:auto;}</style>');
+    doc.write('<style>@page{margin:0;}body{margin:0;}</style>');
     doc.write('</head><body>');
-    doc.write('<img src="' + imgData + '">');
+    doc.write(svgData);
     doc.write('</body></html>');
     doc.close();
     frame.onload = () => {

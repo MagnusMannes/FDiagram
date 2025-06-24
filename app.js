@@ -257,18 +257,41 @@ if (bhaCanvas) {
 
   function normalizeComponent(comp) {
     if (!comp || !Array.isArray(comp.parts)) return comp;
-    const minX = Math.min(...comp.parts.map(p => p.x || 0));
-    const minY = Math.min(...comp.parts.map(p => p.y || 0));
-    const copy = {
-      ...comp,
-      parts: comp.parts.map(p => ({
-        ...p,
-        x: (p.x || 0) - minX,
-        y: (p.y || 0) - minY
-      }))
-    };
-    if (Array.isArray(comp.drawnShapes)) {
-      copy.drawnShapes = comp.drawnShapes.map(s => {
+    const copy = JSON.parse(JSON.stringify(comp));
+
+    if (Array.isArray(copy.drawnShapes)) {
+      copy.drawnShapes.forEach(s => {
+        const idx = typeof s.parentIndex === 'number' ? s.parentIndex : -1;
+        const p = copy.parts && copy.parts[idx];
+        if (!p) return;
+        if (s.type === 'line') {
+          if (typeof s.relX1 === 'number') s.x1 = p.x + s.relX1 * p.width;
+          if (typeof s.relY1 === 'number') s.y1 = p.y + s.relY1 * p.height;
+          if (typeof s.relX2 === 'number') s.x2 = p.x + s.relX2 * p.width;
+          if (typeof s.relY2 === 'number') s.y2 = p.y + s.relY2 * p.height;
+        } else if (s.type === 'circle') {
+          if (typeof s.relCX === 'number') s.cx = p.x + s.relCX * p.width;
+          if (typeof s.relCY === 'number') s.cy = p.y + s.relCY * p.height;
+          if (typeof s.relR === 'number') s.r = s.relR * ((p.width + p.height) / 2);
+        } else if (s.type === 'curve') {
+          if (s.relP0) s.p0 = { x: p.x + s.relP0.x * p.width, y: p.y + s.relP0.y * p.height };
+          if (s.relP1) s.p1 = { x: p.x + s.relP1.x * p.width, y: p.y + s.relP1.y * p.height };
+          if (s.relP2) s.p2 = { x: p.x + s.relP2.x * p.width, y: p.y + s.relP2.y * p.height };
+        }
+      });
+    }
+
+    const minX = Math.min(...copy.parts.map(p => p.x || 0));
+    const minY = Math.min(...copy.parts.map(p => p.y || 0));
+
+    copy.parts = copy.parts.map(p => ({
+      ...p,
+      x: (p.x || 0) - minX,
+      y: (p.y || 0) - minY
+    }));
+
+    if (Array.isArray(copy.drawnShapes)) {
+      copy.drawnShapes = copy.drawnShapes.map(s => {
         const d = JSON.parse(JSON.stringify(s));
         if (s.type === 'line') {
           d.x1 -= minX; d.y1 -= minY;
@@ -283,6 +306,7 @@ if (bhaCanvas) {
         return d;
       });
     }
+
     return copy;
   }
 

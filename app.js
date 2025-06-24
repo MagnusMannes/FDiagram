@@ -4,6 +4,17 @@ let currentAssembly = [];
 let currentAssemblyIdx = 0;
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
+let CONNECTOR_TEMPLATE = null;
+
+// load thread template used for PIN/BOX connectors
+fetch('fdrawingv1/threads.json')
+  .then(r => r.json())
+  .then(d => {
+    CONNECTOR_TEMPLATE = preprocessConnectorTemplate(d);
+    if (typeof redraw === 'function') redraw();
+  })
+  .catch(() => {});
+
 loadSession();
 
 function loadSession() {
@@ -342,6 +353,130 @@ if (bhaCanvas) {
     return rgbToHex(nr, ng, nb);
   }
 
+  function preprocessConnectorTemplate(data) {
+    const parts = [];
+    const lines = [];
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+
+    (data.parts || []).forEach((p) => {
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x + p.width);
+      maxY = Math.max(maxY, p.y + p.height);
+      parts.push({
+        x: p.x,
+        y: p.y,
+        width: p.width,
+        height: p.height,
+        verts: (p.symVertices || []).slice().sort((a, b) => a.y - b.y),
+      });
+    });
+
+    (data.drawnShapes || []).forEach((s) => {
+      if (s.type === 'line') {
+        minX = Math.min(minX, s.x1, s.x2);
+        maxX = Math.max(maxX, s.x1, s.x2);
+        minY = Math.min(minY, s.y1, s.y2);
+        maxY = Math.max(maxY, s.y1, s.y2);
+        lines.push({ x1: s.x1, y1: s.y1, x2: s.x2, y2: s.y2 });
+      }
+    });
+
+    const width = maxX - minX;
+    const height = maxY - minY;
+
+    parts.forEach((p) => {
+      p.x -= minX;
+      p.y -= minY;
+      const x = p.x;
+      const y = p.y;
+      const w = p.width;
+      const h = p.height;
+      const verts = p.verts;
+      const pts = [];
+      pts.push({ x, y });
+      pts.push({ x: x + w, y });
+      verts.forEach((v) => {
+        pts.push({ x: x + w + v.dx, y: y + v.y });
+      });
+      pts.push({ x: x + w, y: y + h });
+      pts.push({ x, y: y + h });
+      for (let i = verts.length - 1; i >= 0; i--) {
+        const v = verts[i];
+        pts.push({ x: x - v.dx, y: y + v.y });
+      }
+      p.points = pts;
+    });
+
+    lines.forEach((l) => {
+      l.x1 -= minX;
+      l.y1 -= minY;
+      l.x2 -= minX;
+      l.y2 -= minY;
+    });
+
+    return { width, height, parts, lines };
+  }
+
+  function drawConnector(part, pos, type) {
+    if (!CONNECTOR_TEMPLATE) return;
+    const scale = (part.width * 0.8) / CONNECTOR_TEMPLATE.width;
+    const w = CONNECTOR_TEMPLATE.width * scale;
+    const h = CONNECTOR_TEMPLATE.height * scale;
+    const flip =
+      (pos === 'top' && type === 'PIN') ||
+      (pos === 'bottom' && type === 'BOX');
+    const x0 = part.x + (part.width - w) / 2;
+    let y0;
+    if (pos === 'top') y0 = type === 'PIN' ? part.y - h : part.y;
+    else y0 = type === 'PIN' ? part.y + part.height : part.y + part.height - h;
+
+    ctx.save();
+    ctx.translate(x0, y0);
+    if (flip) {
+      ctx.translate(0, h);
+      ctx.scale(scale, -scale);
+    } else {
+      ctx.scale(scale, scale);
+    }
+
+    CONNECTOR_TEMPLATE.parts.forEach((p) => {
+      const pts = p.points;
+      if (!pts.length) return;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.closePath();
+      ctx.fillStyle = type === 'BOX' ? '#b3b3b3' : '#cccccc';
+      if (type === 'BOX') {
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 2]);
+        ctx.fill();
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        ctx.fill();
+      }
+    });
+
+    CONNECTOR_TEMPLATE.lines.forEach((l) => {
+      ctx.beginPath();
+      ctx.moveTo(l.x1, l.y1);
+      ctx.lineTo(l.x2, l.y2);
+      ctx.strokeStyle = type === 'BOX' ? '#555' : '#000';
+      ctx.lineWidth = 2;
+      if (type === 'BOX') ctx.setLineDash([4, 2]);
+      ctx.stroke();
+      if (type === 'BOX') ctx.setLineDash([]);
+    });
+
+    ctx.restore();
+  }
+
   function cylinderGradient(ctx, color, x, w) {
     const grad = ctx.createLinearGradient(x, 0, x + w, 0);
     grad.addColorStop(0, darkenColor(color, 0.25));
@@ -410,6 +545,13 @@ if (bhaCanvas) {
   function drawComponent(comp, x, y) {
     comp.parts.forEach(p => drawPart(p, x, y));
     drawShapes(comp, x, y);
+    comp.parts.forEach(p => {
+      const part = { x: x + (p.x || 0), y: y + (p.y || 0), width: p.width, height: p.height };
+      if (p.topConnector && p.topConnector !== 'none')
+        drawConnector(part, 'top', p.topConnector);
+      if (p.bottomConnector && p.bottomConnector !== 'none')
+        drawConnector(part, 'bottom', p.bottomConnector);
+    });
   }
 
   function getComponentBounds(comp) {
@@ -420,6 +562,16 @@ if (bhaCanvas) {
         minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
         maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
       });
+      if (CONNECTOR_TEMPLATE) {
+        if (p.topConnector === 'PIN') {
+          const scale = (p.width * 0.8) / CONNECTOR_TEMPLATE.width;
+          minY = Math.min(minY, p.y - CONNECTOR_TEMPLATE.height * scale);
+        }
+        if (p.bottomConnector === 'PIN') {
+          const scale = (p.width * 0.8) / CONNECTOR_TEMPLATE.width;
+          maxY = Math.max(maxY, p.y + p.height + CONNECTOR_TEMPLATE.height * scale);
+        }
+      }
     });
     (comp.drawnShapes || []).forEach(s => {
       if (s.type === 'line') {

@@ -257,22 +257,83 @@ if (bhaCanvas) {
   }
   redraw();
 
+  function renderForPrint(ctx, scale) {
+    const width = bhaCanvas.width * scale;
+    const height = bhaCanvas.height * scale;
+    const margin = 20 * scale;
+    ctx.lineWidth = 2 * scale;
+    ctx.strokeStyle = '#000';
+    ctx.clearRect(0, 0, width, height);
+    ctx.strokeRect(0, 0, width, height);
+    ctx.strokeRect(margin, margin, width - margin * 2, height - margin * 2);
+
+    const tbW = 270 * scale;
+    const tbH = 80 * scale;
+    const smallRow = tbH / 4;
+    const titleCol = 50 * scale;
+    const x = width - margin - tbW;
+    const y = height - margin - tbH;
+    ctx.strokeRect(x, y, tbW, tbH);
+    ctx.beginPath();
+    ctx.moveTo(x, y + smallRow);
+    ctx.lineTo(x + tbW, y + smallRow);
+    ctx.moveTo(x + titleCol, y);
+    ctx.lineTo(x + titleCol, y + smallRow);
+    ctx.stroke();
+
+    ctx.font = (12 * scale) + 'px sans-serif';
+    ctx.fillStyle = '#000';
+    ctx.fillText('Title:', x + 4 * scale, y + 14 * scale);
+    ctx.fillText(assyObj.name, x + titleCol + 4 * scale, y + 14 * scale);
+    ctx.fillText('Comment:', x + 4 * scale, y + smallRow + 14 * scale);
+
+    placed.forEach(item => {
+      item.comp.parts.forEach(p => {
+        ctx.fillStyle = p.color || '#ccc';
+        const dx = (item.x + (p.x || 0)) * scale;
+        const dy = (item.y + (p.y || 0)) * scale;
+        const dw = p.width * scale;
+        const dh = p.height * scale;
+        ctx.fillRect(dx, dy, dw, dh);
+        ctx.strokeStyle = '#000';
+        ctx.strokeRect(dx, dy, dw, dh);
+      });
+    });
+  }
+
   document.getElementById('printPdfBtn').onclick = () => {
     const now = new Date();
     const stamp = now.toISOString().replace(/[:T]/g, '-').split('.')[0];
     const fileName = (assyObj.name || 'assembly') + '_' + stamp;
-    const imgData = bhaCanvas.toDataURL('image/png');
-    const win = window.open('', '_blank');
-    if (!win) return;
-    win.document.write('<html><head><title>' + fileName + '</title>');
-    win.document.write('<style>@page{margin:0;}body{margin:0;}img{width:100%;height:auto;}</style>');
-    win.document.write('</head><body>');
-    win.document.write('<img src="' + imgData + '">');
-    win.document.write('</body></html>');
-    win.document.close();
-    win.focus();
-    win.print();
-    win.onafterprint = () => win.close();
+
+    const scale = 3; // roughly 300 DPI for A4
+    const pCanvas = document.createElement('canvas');
+    pCanvas.width = bhaCanvas.width * scale;
+    pCanvas.height = bhaCanvas.height * scale;
+    renderForPrint(pCanvas.getContext('2d'), scale);
+    const imgData = pCanvas.toDataURL('image/png');
+
+    const frame = document.createElement('iframe');
+    frame.style.position = 'fixed';
+    frame.style.right = '0';
+    frame.style.bottom = '0';
+    frame.style.width = '0';
+    frame.style.height = '0';
+    frame.style.border = '0';
+    document.body.appendChild(frame);
+    const doc = frame.contentDocument || frame.contentWindow.document;
+    doc.open();
+    doc.write('<html><head><title>' + fileName + '</title>');
+    doc.write('<style>@page{margin:0;}body{margin:0;}img{width:100%;height:auto;}</style>');
+    doc.write('</head><body>');
+    doc.write('<img src="' + imgData + '">');
+    doc.write('</body></html>');
+    doc.close();
+    frame.onload = () => {
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+    };
+    frame.contentWindow.onafterprint = () => frame.remove();
   };
 
   document.getElementById('backAssyBtn').onclick = () => {

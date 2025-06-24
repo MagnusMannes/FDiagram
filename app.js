@@ -205,10 +205,25 @@ if (bhaCanvas) {
     ev.preventDefault();
     const json = ev.dataTransfer.getData('application/json');
     if (!json) return;
-    const comp = JSON.parse(json);
+    const comp = normalizeComponent(JSON.parse(json));
     placed.push({ comp, x: ev.offsetX, y: ev.offsetY });
     redraw();
   });
+
+  function normalizeComponent(comp) {
+    if (!comp || !Array.isArray(comp.parts)) return comp;
+    const minX = Math.min(...comp.parts.map(p => p.x || 0));
+    const minY = Math.min(...comp.parts.map(p => p.y || 0));
+    const copy = {
+      ...comp,
+      parts: comp.parts.map(p => ({
+        ...p,
+        x: (p.x || 0) - minX,
+        y: (p.y || 0) - minY
+      }))
+    };
+    return copy;
+  }
 
   function drawComponent(comp, x, y) {
     comp.parts.forEach(p => {

@@ -210,6 +210,51 @@ if (bhaCanvas) {
     redraw();
   });
 
+  let dragObj = null;
+  let dragOffX = 0;
+  let dragOffY = 0;
+
+  bhaCanvas.addEventListener('mousedown', e => {
+    const rect = bhaCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    for (let i = placed.length - 1; i >= 0; i--) {
+      const it = placed[i];
+      const b = getComponentBounds(it.comp);
+      if (x >= it.x + b.minX && x <= it.x + b.maxX &&
+          y >= it.y + b.minY && y <= it.y + b.maxY) {
+        dragObj = it;
+        dragOffX = x - it.x;
+        dragOffY = y - it.y;
+        placed.splice(i, 1);
+        placed.push(it);
+        redraw();
+        break;
+      }
+    }
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!dragObj) return;
+    const rect = bhaCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    dragObj.x = x - dragOffX;
+    dragObj.y = y - dragOffY;
+    redraw();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!dragObj) return;
+    const b = getComponentBounds(dragObj.comp);
+    if (dragObj.x + b.maxX < 0 || dragObj.x + b.minX > bhaCanvas.width ||
+        dragObj.y + b.maxY < 0 || dragObj.y + b.minY > bhaCanvas.height) {
+      placed = placed.filter(p => p !== dragObj);
+    }
+    dragObj = null;
+    redraw();
+  });
+
   function normalizeComponent(comp) {
     if (!comp || !Array.isArray(comp.parts)) return comp;
     const minX = Math.min(...comp.parts.map(p => p.x || 0));
@@ -222,16 +267,157 @@ if (bhaCanvas) {
         y: (p.y || 0) - minY
       }))
     };
+    if (Array.isArray(comp.drawnShapes)) {
+      copy.drawnShapes = comp.drawnShapes.map(s => {
+        const d = JSON.parse(JSON.stringify(s));
+        if (s.type === 'line') {
+          d.x1 -= minX; d.y1 -= minY;
+          d.x2 -= minX; d.y2 -= minY;
+        } else if (s.type === 'circle') {
+          d.cx -= minX; d.cy -= minY;
+        } else if (s.type === 'curve') {
+          d.p0.x -= minX; d.p0.y -= minY;
+          d.p1.x -= minX; d.p1.y -= minY;
+          d.p2.x -= minX; d.p2.y -= minY;
+        }
+        return d;
+      });
+    }
     return copy;
   }
 
-  function drawComponent(comp, x, y) {
-    comp.parts.forEach(p => {
-      ctx.fillStyle = p.color || '#ccc';
-      ctx.fillRect(x + (p.x || 0), y + (p.y || 0), p.width, p.height);
+  function hexToRgb(hex) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const num = parseInt(hex, 16);
+    return [num >> 16, (num >> 8) & 255, num & 255];
+  }
+
+  function rgbToHex(r, g, b) {
+    return (
+      '#' + [r, g, b].map(v => {
+        const h = v.toString(16);
+        return h.length === 1 ? '0' + h : h;
+      }).join('')
+    );
+  }
+
+  function lightenColor(color, p) {
+    const [r, g, b] = hexToRgb(color);
+    const nr = Math.round(r + (255 - r) * p);
+    const ng = Math.round(g + (255 - g) * p);
+    const nb = Math.round(b + (255 - b) * p);
+    return rgbToHex(nr, ng, nb);
+  }
+
+  function darkenColor(color, p) {
+    const [r, g, b] = hexToRgb(color);
+    const nr = Math.round(r * (1 - p));
+    const ng = Math.round(g * (1 - p));
+    const nb = Math.round(b * (1 - p));
+    return rgbToHex(nr, ng, nb);
+  }
+
+  function cylinderGradient(ctx, color, x, w) {
+    const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+    grad.addColorStop(0, darkenColor(color, 0.25));
+    grad.addColorStop(0.25, lightenColor(color, 0.2));
+    grad.addColorStop(0.5, lightenColor(color, 0.4));
+    grad.addColorStop(0.75, lightenColor(color, 0.2));
+    grad.addColorStop(1, darkenColor(color, 0.25));
+    return grad;
+  }
+
+  function partPolygonPoints(p, offX, offY) {
+    const x = offX + (p.x || 0);
+    const y = offY + (p.y || 0);
+    const w = p.width;
+    const h = p.height;
+    const verts = (p.symVertices || []).slice().sort((a,b)=>a.y-b.y);
+    const pts = [];
+    pts.push({x, y});
+    pts.push({x:x+w, y});
+    verts.forEach(v => pts.push({x:x+w+v.dx, y:y+v.y}));
+    pts.push({x:x+w, y:y+h});
+    pts.push({x, y:y+h});
+    for(let i=verts.length-1;i>=0;i--) pts.push({x:x-verts[i].dx, y:y+verts[i].y});
+    return pts;
+  }
+
+  function drawPart(p, offX, offY) {
+    const pts = partPolygonPoints(p, offX, offY);
+    if (!pts.length) return;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    ctx.fillStyle = cylinderGradient(ctx, p.color || '#ccc',
+      offX + (p.x||0), p.width);
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.stroke();
+  }
+
+  function drawShapes(comp, offX, offY) {
+    if (!Array.isArray(comp.drawnShapes)) return;
+    comp.drawnShapes.forEach(s => {
+      ctx.lineWidth = s.width || 2;
       ctx.strokeStyle = '#000';
-      ctx.strokeRect(x + (p.x || 0), y + (p.y || 0), p.width, p.height);
+      ctx.setLineDash([]);
+      if (s.type === 'line') {
+        ctx.beginPath();
+        ctx.moveTo(offX + s.x1, offY + s.y1);
+        ctx.lineTo(offX + s.x2, offY + s.y2);
+        ctx.stroke();
+      } else if (s.type === 'circle') {
+        ctx.beginPath();
+        ctx.arc(offX + s.cx, offY + s.cy, s.r, 0, Math.PI*2);
+        ctx.stroke();
+      } else if (s.type === 'curve') {
+        ctx.beginPath();
+        ctx.moveTo(offX + s.p0.x, offY + s.p0.y);
+        ctx.quadraticCurveTo(offX + s.p1.x, offY + s.p1.y,
+                             offX + s.p2.x, offY + s.p2.y);
+        ctx.stroke();
+      }
     });
+  }
+
+  function drawComponent(comp, x, y) {
+    comp.parts.forEach(p => drawPart(p, x, y));
+    drawShapes(comp, x, y);
+  }
+
+  function getComponentBounds(comp) {
+    if (comp._bounds) return comp._bounds;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    comp.parts.forEach(p => {
+      partPolygonPoints(p, 0, 0).forEach(pt => {
+        minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
+        maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
+      });
+    });
+    (comp.drawnShapes || []).forEach(s => {
+      if (s.type === 'line') {
+        minX = Math.min(minX, s.x1, s.x2);
+        maxX = Math.max(maxX, s.x1, s.x2);
+        minY = Math.min(minY, s.y1, s.y2);
+        maxY = Math.max(maxY, s.y1, s.y2);
+      } else if (s.type === 'circle') {
+        minX = Math.min(minX, s.cx - s.r);
+        maxX = Math.max(maxX, s.cx + s.r);
+        minY = Math.min(minY, s.cy - s.r);
+        maxY = Math.max(maxY, s.cy + s.r);
+      } else if (s.type === 'curve') {
+        [s.p0, s.p1, s.p2].forEach(pt => {
+          minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+          minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y);
+        });
+      }
+    });
+    if (minX === Infinity) { minX = minY = 0; maxX = maxY = 0; }
+    comp._bounds = {minX, minY, maxX, maxY, width:maxX-minX, height:maxY-minY};
+    return comp._bounds;
   }
 
   function drawFrame() {
@@ -303,16 +489,10 @@ if (bhaCanvas) {
     ctx.fillText('Comment:', x + 4 * scale, y + smallRow + 14 * scale);
 
     placed.forEach(item => {
-      item.comp.parts.forEach(p => {
-        ctx.fillStyle = p.color || '#ccc';
-        const dx = (item.x + (p.x || 0)) * scale;
-        const dy = (item.y + (p.y || 0)) * scale;
-        const dw = p.width * scale;
-        const dh = p.height * scale;
-        ctx.fillRect(dx, dy, dw, dh);
-        ctx.strokeStyle = '#000';
-        ctx.strokeRect(dx, dy, dw, dh);
-      });
+      ctx.save();
+      ctx.scale(scale, scale);
+      drawComponent(item.comp, item.x, item.y);
+      ctx.restore();
     });
   }
 

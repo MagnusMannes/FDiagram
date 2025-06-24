@@ -183,7 +183,9 @@ if (bhaCanvas) {
     currentBha.assemblies[currentAssemblyIdx] = placed;
     saveCurrentBha();
     storeSession();
-    location.href = 'assembly.html';
+    // Replace the builder page in history so returning from assemblies
+    // never navigates back here
+    location.replace('assembly.html');
   };
 }
 

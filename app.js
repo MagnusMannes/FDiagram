@@ -6,6 +6,74 @@ const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
 let CONNECTOR_TEMPLATE = null;
 
+function preprocessConnectorTemplate(data) {
+  const parts = [];
+  const lines = [];
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
+
+  (data.parts || []).forEach((p) => {
+    minX = Math.min(minX, p.x);
+    minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x + p.width);
+    maxY = Math.max(maxY, p.y + p.height);
+    parts.push({
+      x: p.x,
+      y: p.y,
+      width: p.width,
+      height: p.height,
+      verts: (p.symVertices || []).slice().sort((a, b) => a.y - b.y),
+    });
+  });
+
+  (data.drawnShapes || []).forEach((s) => {
+    if (s.type === 'line') {
+      minX = Math.min(minX, s.x1, s.x2);
+      maxX = Math.max(maxX, s.x1, s.x2);
+      minY = Math.min(minY, s.y1, s.y2);
+      maxY = Math.max(maxY, s.y1, s.y2);
+      lines.push({ x1: s.x1, y1: s.y1, x2: s.x2, y2: s.y2 });
+    }
+  });
+
+  const width = maxX - minX;
+  const height = maxY - minY;
+
+  parts.forEach((p) => {
+    p.x -= minX;
+    p.y -= minY;
+    const x = p.x;
+    const y = p.y;
+    const w = p.width;
+    const h = p.height;
+    const verts = p.verts;
+    const pts = [];
+    pts.push({ x, y });
+    pts.push({ x: x + w, y });
+    verts.forEach((v) => {
+      pts.push({ x: x + w + v.dx, y: y + v.y });
+    });
+    pts.push({ x: x + w, y: y + h });
+    pts.push({ x, y: y + h });
+    for (let i = verts.length - 1; i >= 0; i--) {
+      const v = verts[i];
+      pts.push({ x: x - v.dx, y: y + v.y });
+    }
+    p.points = pts;
+  });
+
+  lines.forEach((l) => {
+    l.x1 -= minX;
+    l.y1 -= minY;
+    l.x2 -= minX;
+    l.y2 -= minY;
+  });
+
+  return { width, height, parts, lines };
+}
+
 // built-in fallback for connector graphics
 const THREAD_TEMPLATE_DATA = {
   "parts": [
@@ -373,74 +441,6 @@ if (bhaCanvas) {
     const ng = Math.round(g * (1 - p));
     const nb = Math.round(b * (1 - p));
     return rgbToHex(nr, ng, nb);
-  }
-
-  function preprocessConnectorTemplate(data) {
-    const parts = [];
-    const lines = [];
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-
-    (data.parts || []).forEach((p) => {
-      minX = Math.min(minX, p.x);
-      minY = Math.min(minY, p.y);
-      maxX = Math.max(maxX, p.x + p.width);
-      maxY = Math.max(maxY, p.y + p.height);
-      parts.push({
-        x: p.x,
-        y: p.y,
-        width: p.width,
-        height: p.height,
-        verts: (p.symVertices || []).slice().sort((a, b) => a.y - b.y),
-      });
-    });
-
-    (data.drawnShapes || []).forEach((s) => {
-      if (s.type === 'line') {
-        minX = Math.min(minX, s.x1, s.x2);
-        maxX = Math.max(maxX, s.x1, s.x2);
-        minY = Math.min(minY, s.y1, s.y2);
-        maxY = Math.max(maxY, s.y1, s.y2);
-        lines.push({ x1: s.x1, y1: s.y1, x2: s.x2, y2: s.y2 });
-      }
-    });
-
-    const width = maxX - minX;
-    const height = maxY - minY;
-
-    parts.forEach((p) => {
-      p.x -= minX;
-      p.y -= minY;
-      const x = p.x;
-      const y = p.y;
-      const w = p.width;
-      const h = p.height;
-      const verts = p.verts;
-      const pts = [];
-      pts.push({ x, y });
-      pts.push({ x: x + w, y });
-      verts.forEach((v) => {
-        pts.push({ x: x + w + v.dx, y: y + v.y });
-      });
-      pts.push({ x: x + w, y: y + h });
-      pts.push({ x, y: y + h });
-      for (let i = verts.length - 1; i >= 0; i--) {
-        const v = verts[i];
-        pts.push({ x: x - v.dx, y: y + v.y });
-      }
-      p.points = pts;
-    });
-
-    lines.forEach((l) => {
-      l.x1 -= minX;
-      l.y1 -= minY;
-      l.x2 -= minX;
-      l.y2 -= minY;
-    });
-
-    return { width, height, parts, lines };
   }
 
   function drawConnector(part, pos, type) {

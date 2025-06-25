@@ -22,8 +22,8 @@ button:hover{filter:brightness(.95);}
 .back-btn{margin-top:1rem;}
 .view.builder .back-btn{position:absolute;bottom:1rem;left:1rem;margin-top:0;}
 .view.builder .print-btn{position:absolute;bottom:4rem;left:1rem;}
-.view.builder .scale-down-btn{position:absolute;bottom:7rem;left:1rem;}
-.view.builder .scale-up-btn{position:absolute;bottom:10rem;left:1rem;}
+.view.builder .scale-down-btn{position:absolute;bottom:6.5rem;left:1rem;}
+.view.builder .scale-up-btn{position:absolute;bottom:9rem;left:1rem;}
 
 /*  ensure older browsers respect the hidden attribute  */
 [hidden]{display:none!important;}

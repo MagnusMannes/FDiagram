@@ -840,15 +840,18 @@ if (bhaCanvas) {
   }
   redraw();
 
-  document.getElementById('scaleUpBtn').onclick = () => {
-    placed.forEach(p => { p.scale *= 1 + SCALE_STEP; });
+  function applyScale(factor) {
+    placed.forEach(p => { p.scale = Math.max(0.05, p.scale * factor); });
     redraw();
-  };
+  }
 
-  document.getElementById('scaleDownBtn').onclick = () => {
-    placed.forEach(p => { p.scale = Math.max(0.05, p.scale * (1 - SCALE_STEP)); });
-    redraw();
-  };
+  document.getElementById('scaleUpBtn').addEventListener('click', () => {
+    applyScale(1 + SCALE_STEP);
+  });
+
+  document.getElementById('scaleDownBtn').addEventListener('click', () => {
+    applyScale(1 - SCALE_STEP);
+  });
 
   function renderForPrint(ctx, scale) {
     const width = bhaCanvas.width * scale;

@@ -27,6 +27,17 @@ let contextConnector = null;
 const menu = document.getElementById("contextMenu");
 const canvasArea = document.getElementById("canvas_area");
 const partNameInput = document.getElementById("partName");
+const finishedBtn = document.getElementById("finishedBtn");
+if (window.opener && finishedBtn) finishedBtn.style.display = "block";
+window.addEventListener('message', (e) => {
+  if (window.opener && e.source === window.opener) {
+    const msg = e.data || {};
+    if (msg.type === 'editComponent' && msg.component) {
+      saveState();
+      loadFromData(msg.component);
+    }
+  }
+});
 let zoom = 1;
 let verticalScaleIndex = 0;
 function updateVerticalScaleIndex() {
@@ -479,8 +490,8 @@ document.addEventListener("click", () => {
   contextConnector = null;
 });
 
-document.getElementById("exportBtn").addEventListener("click", () => {
-  const data = {
+function buildComponentData() {
+  return {
     name: partNameInput.value,
     parts: parts.map((p) => ({
       x: parseFloat(p.rect.getAttribute("x")),
@@ -504,6 +515,10 @@ document.getElementById("exportBtn").addEventListener("click", () => {
     })),
     drawnShapes: drawnShapes.map(stripShape),
   };
+}
+
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const data = buildComponentData();
   const blob = new Blob([JSON.stringify(data, null, 2)], {
     type: "application/json",
   });
@@ -517,6 +532,16 @@ document.getElementById("exportBtn").addEventListener("click", () => {
     window.opener.postMessage({ type: 'newComponent', component: data }, '*');
   }
 });
+
+if (finishedBtn) {
+  finishedBtn.addEventListener('click', () => {
+    const data = buildComponentData();
+    if (window.opener) {
+      window.opener.postMessage({ type: 'newComponent', component: data }, '*');
+    }
+    window.close();
+  });
+}
 
 document.getElementById("importBtn").addEventListener("click", () =>
   document.getElementById("fileInput").click()

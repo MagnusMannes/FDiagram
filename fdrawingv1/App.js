@@ -28,7 +28,7 @@ const menu = document.getElementById("contextMenu");
 const canvasArea = document.getElementById("canvas_area");
 const partNameInput = document.getElementById("partName");
 const finishedBtn = document.getElementById("finishedBtn");
-if (window.opener && finishedBtn) finishedBtn.style.display = "block";
+if (finishedBtn) finishedBtn.style.display = "block";
 window.addEventListener('message', (e) => {
   if (window.opener && e.source === window.opener) {
     const msg = e.data || {};
@@ -536,6 +536,15 @@ document.getElementById("exportBtn").addEventListener("click", () => {
 if (finishedBtn) {
   finishedBtn.addEventListener('click', () => {
     const data = buildComponentData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json'
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const safeName = (partNameInput.value.trim() || 'diagram')
+      .replace(/[^a-z0-9_-]/gi, '_');
+    a.download = `${safeName}.json`;
+    a.click();
     if (window.opener) {
       window.opener.postMessage({ type: 'newComponent', component: data }, '*');
     }

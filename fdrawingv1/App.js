@@ -28,7 +28,6 @@ const menu = document.getElementById("contextMenu");
 const canvasArea = document.getElementById("canvas_area");
 const partNameInput = document.getElementById("partName");
 const finishedBtn = document.getElementById("finishedBtn");
-if (window.opener && finishedBtn) finishedBtn.style.display = "block";
 window.addEventListener('message', (e) => {
   if (window.opener && e.source === window.opener) {
     const msg = e.data || {};
@@ -534,6 +533,9 @@ document.getElementById("exportBtn").addEventListener("click", () => {
 });
 
 if (finishedBtn) {
+  if (window.opener) {
+    finishedBtn.style.display = 'block';
+  }
   finishedBtn.addEventListener('click', () => {
     const data = buildComponentData();
     if (window.opener) {

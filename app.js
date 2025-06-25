@@ -263,6 +263,12 @@ if (bhaCanvas) {
   let placed = [];
   const menu = document.getElementById('contextMenu');
   let contextItem = null;
+  const DEFAULT_SCALE = 0.125;
+  let selectedItem = null;
+  let resizeObj = null;
+  let resizeAnchor = null;
+  let resizeStartDist = 0;
+  let resizeStartScale = 1;
 
   const nameInput = document.getElementById('assyTitle');
   const assyObj = currentBha.assemblies[currentAssemblyIdx] || { name: 'Assembly ' + (currentAssemblyIdx + 1), items: [] };
@@ -310,7 +316,13 @@ if (bhaCanvas) {
     const json = ev.dataTransfer.getData('application/json');
     if (!json) return;
     const comp = normalizeComponent(JSON.parse(json));
-    placed.push({ comp, x: ev.offsetX, y: ev.offsetY, flipped: false });
+    placed.push({
+      comp,
+      x: ev.offsetX,
+      y: ev.offsetY,
+      flipped: false,
+      scale: DEFAULT_SCALE
+    });
     redraw();
   });
 
@@ -318,16 +330,53 @@ if (bhaCanvas) {
   let dragOffX = 0;
   let dragOffY = 0;
 
+  function getHandlePos(it) {
+    const b = getComponentBounds(it.comp);
+    return {
+      x: it.x + it.scale * (it.flipped ? b.minX : b.maxX),
+      y: it.y + it.scale * (it.flipped ? b.maxY : b.minY)
+    };
+  }
+
+  function getAnchorPos(it) {
+    const b = getComponentBounds(it.comp);
+    return {
+      x: it.x + it.scale * (it.flipped ? b.maxX : b.minX),
+      y: it.y + it.scale * (it.flipped ? b.minY : b.maxY)
+    };
+  }
+
+  function dist(x1, y1, x2, y2) {
+    return Math.hypot(x1 - x2, y1 - y2);
+  }
+
   bhaCanvas.addEventListener('mousedown', e => {
     const rect = bhaCanvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    if (selectedItem) {
+      const h = getHandlePos(selectedItem);
+      if (dist(x, y, h.x, h.y) <= 8) {
+        resizeObj = selectedItem;
+        resizeAnchor = getAnchorPos(selectedItem);
+        resizeStartDist = dist(h.x, h.y, resizeAnchor.x, resizeAnchor.y);
+        resizeStartScale = selectedItem.scale;
+        return;
+      }
+    }
+
+    selectedItem = null;
     for (let i = placed.length - 1; i >= 0; i--) {
       const it = placed[i];
       const b = getComponentBounds(it.comp);
-      if (x >= it.x + b.minX && x <= it.x + b.maxX &&
-          y >= it.y + b.minY && y <= it.y + b.maxY) {
+      const minX = it.x + b.minX * it.scale;
+      const maxX = it.x + b.maxX * it.scale;
+      const minY = it.y + b.minY * it.scale;
+      const maxY = it.y + b.maxY * it.scale;
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
         dragObj = it;
+        selectedItem = it;
         dragOffX = x - it.x;
         dragOffY = y - it.y;
         placed.splice(i, 1);
@@ -336,23 +385,42 @@ if (bhaCanvas) {
         break;
       }
     }
+    redraw();
   });
 
   window.addEventListener('mousemove', e => {
-    if (!dragObj) return;
     const rect = bhaCanvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    if (resizeObj) {
+      const d = dist(x, y, resizeAnchor.x, resizeAnchor.y);
+      if (resizeStartDist > 0) {
+        resizeObj.scale = Math.max(0.05, resizeStartScale * (d / resizeStartDist));
+        redraw();
+      }
+      return;
+    }
+
+    if (!dragObj) return;
     dragObj.x = x - dragOffX;
     dragObj.y = y - dragOffY;
     redraw();
   });
 
   window.addEventListener('mouseup', () => {
+    if (resizeObj) {
+      resizeObj = null;
+      redraw();
+      return;
+    }
     if (!dragObj) return;
     const b = getComponentBounds(dragObj.comp);
-    if (dragObj.x + b.maxX < 0 || dragObj.x + b.minX > bhaCanvas.width ||
-        dragObj.y + b.maxY < 0 || dragObj.y + b.minY > bhaCanvas.height) {
+    const minX = dragObj.x + b.minX * dragObj.scale;
+    const maxX = dragObj.x + b.maxX * dragObj.scale;
+    const minY = dragObj.y + b.minY * dragObj.scale;
+    const maxY = dragObj.y + b.maxY * dragObj.scale;
+    if (maxX < 0 || minX > bhaCanvas.width || maxY < 0 || minY > bhaCanvas.height) {
       placed = placed.filter(p => p !== dragObj);
     }
     dragObj = null;
@@ -368,8 +436,11 @@ if (bhaCanvas) {
     for (let i = placed.length - 1; i >= 0; i--) {
       const it = placed[i];
       const b = getComponentBounds(it.comp);
-      if (x >= it.x + b.minX && x <= it.x + b.maxX &&
-          y >= it.y + b.minY && y <= it.y + b.maxY) {
+      const minX = it.x + b.minX * it.scale;
+      const maxX = it.x + b.maxX * it.scale;
+      const minY = it.y + b.minY * it.scale;
+      const maxY = it.y + b.maxY * it.scale;
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
         contextItem = it;
         break;
       }
@@ -651,18 +722,20 @@ if (bhaCanvas) {
     });
   }
 
-  function drawComponent(comp, x, y, flipped) {
+  function drawComponent(comp, x, y, flipped, scale = 1) {
     ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
     if (flipped) {
       const b = getComponentBounds(comp);
-      ctx.translate(x + b.width / 2, y + b.height / 2);
+      ctx.translate(b.width / 2, b.height / 2);
       ctx.rotate(Math.PI);
-      ctx.translate(-(x + b.width / 2), -(y + b.height / 2));
+      ctx.translate(-b.width / 2, -b.height / 2);
     }
-    comp.parts.forEach(p => drawPart(p, x, y));
-    drawShapes(comp, x, y);
+    comp.parts.forEach(p => drawPart(p, 0, 0));
+    drawShapes(comp, 0, 0);
     comp.parts.forEach(p => {
-      const part = { x: x + (p.x || 0), y: y + (p.y || 0), width: p.width, height: p.height };
+      const part = { x: (p.x || 0), y: (p.y || 0), width: p.width, height: p.height };
       if (p.topConnector && p.topConnector !== 'none')
         drawConnector(part, 'top', p.topConnector);
       if (p.bottomConnector && p.bottomConnector !== 'none')
@@ -743,7 +816,16 @@ if (bhaCanvas) {
   function redraw() {
     ctx.clearRect(0, 0, bhaCanvas.width, bhaCanvas.height);
     drawFrame();
-    placed.forEach(item => drawComponent(item.comp, item.x, item.y, item.flipped));
+    placed.forEach(item => {
+      drawComponent(item.comp, item.x, item.y, item.flipped, item.scale || 1);
+      if (item === selectedItem) {
+        const h = getHandlePos(item);
+        ctx.fillStyle = '#007aff';
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
   }
 
   if (assyObj.items) {
@@ -751,7 +833,8 @@ if (bhaCanvas) {
       comp: it.comp,
       x: it.x,
       y: it.y,
-      flipped: it.flipped || false
+      flipped: it.flipped || false,
+      scale: typeof it.scale === 'number' ? it.scale : 1
     }));
   }
   redraw();
@@ -789,7 +872,7 @@ if (bhaCanvas) {
     placed.forEach(item => {
       ctx.save();
       ctx.scale(scale, scale);
-      drawComponent(item.comp, item.x, item.y, item.flipped);
+      drawComponent(item.comp, item.x, item.y, item.flipped, item.scale || 1);
       ctx.restore();
     });
   }

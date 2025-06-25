@@ -357,7 +357,7 @@ if (bhaCanvas) {
 
     if (selectedItem) {
       const h = getHandlePos(selectedItem);
-      if (dist(x, y, h.x, h.y) <= 8) {
+      if (dist(x, y, h.x, h.y) <= 10) {
         resizeObj = selectedItem;
         resizeAnchor = getAnchorPos(selectedItem);
         resizeStartDist = dist(h.x, h.y, resizeAnchor.x, resizeAnchor.y);
@@ -366,7 +366,7 @@ if (bhaCanvas) {
       }
     }
 
-    selectedItem = null;
+    let found = false;
     for (let i = placed.length - 1; i >= 0; i--) {
       const it = placed[i];
       const b = getComponentBounds(it.comp);
@@ -382,8 +382,12 @@ if (bhaCanvas) {
         placed.splice(i, 1);
         placed.push(it);
         redraw();
+        found = true;
         break;
       }
+    }
+    if (!found) {
+      selectedItem = null;
     }
     redraw();
   });

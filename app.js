@@ -259,6 +259,7 @@ if (assemblyList) {
 const bhaCanvas = document.getElementById('bhaCanvas');
 if (bhaCanvas) {
   const ctx = bhaCanvas.getContext('2d');
+  const dropZone = document.getElementById('dropZone');
   let placed = [];
   const menu = document.getElementById('contextMenu');
   let contextItem = null;
@@ -375,8 +376,9 @@ if (bhaCanvas) {
     }
     if (!contextItem) { menu.style.display = 'none'; return; }
 
-    menu.style.left = e.clientX + 'px';
-    menu.style.top = e.clientY + 'px';
+    const zoneRect = dropZone.getBoundingClientRect();
+    menu.style.left = (e.clientX - zoneRect.left + dropZone.scrollLeft) + 'px';
+    menu.style.top = (e.clientY - zoneRect.top + dropZone.scrollTop) + 'px';
 
     const topEnabled = hasTopThread(contextItem.comp);
     const bottomEnabled = hasBottomThread(contextItem.comp);

@@ -265,6 +265,7 @@ if (bhaCanvas) {
   let contextItem = null;
   const DEFAULT_SCALE = 0.125;
   const SCALE_STEP = 0.1;
+  let builderScale = 1;
   let selectedItem = null;
   let resizeObj = null;
   let resizeAnchor = null;
@@ -322,7 +323,7 @@ if (bhaCanvas) {
       x: ev.offsetX,
       y: ev.offsetY,
       flipped: false,
-      scale: DEFAULT_SCALE
+      scale: Math.max(0.05, DEFAULT_SCALE * builderScale)
     });
     redraw();
   });
@@ -837,15 +838,19 @@ if (bhaCanvas) {
       flipped: it.flipped || false,
       scale: typeof it.scale === 'number' ? it.scale : 1
     }));
+    if (placed.length)
+      builderScale = placed[0].scale / DEFAULT_SCALE;
   }
   redraw();
 
   document.getElementById('scaleUpBtn').onclick = () => {
+    builderScale *= 1 + SCALE_STEP;
     placed.forEach(p => { p.scale *= 1 + SCALE_STEP; });
     redraw();
   };
 
   document.getElementById('scaleDownBtn').onclick = () => {
+    builderScale = Math.max(0.05 / DEFAULT_SCALE, builderScale * (1 - SCALE_STEP));
     placed.forEach(p => { p.scale = Math.max(0.05, p.scale * (1 - SCALE_STEP)); });
     redraw();
   };

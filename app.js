@@ -393,9 +393,15 @@ if (bhaCanvas) {
     contextMenu.style.display = 'none';
     editTarget = contextTarget;
     drawerWin = window.open('fdrawingv1/index.html', 'fdrawer');
-    drawerWin.onload = () => {
+    const sendEditMsg = () => {
+      if (!drawerWin) return;
       drawerWin.postMessage({ type: 'editComponent', component: editTarget.comp }, '*');
     };
+    if (drawerWin.document && drawerWin.document.readyState === 'complete') {
+      sendEditMsg();
+    } else {
+      drawerWin.onload = sendEditMsg;
+    }
   });
 
   function getHandlePos(it) {

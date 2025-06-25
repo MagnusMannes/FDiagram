@@ -303,7 +303,7 @@ if (bhaCanvas) {
   let editTarget = null;
   if (newComponentBtn) {
     newComponentBtn.onclick = () => {
-      drawerWin = window.open('fdrawingv1/index.html', 'fdrawer');
+      drawerWin = window.open('fdrawingv1/index.html', '_blank');
     };
   }
 
@@ -392,7 +392,7 @@ if (bhaCanvas) {
     if (!contextTarget) return;
     contextMenu.style.display = 'none';
     editTarget = contextTarget;
-    drawerWin = window.open('fdrawingv1/index.html', 'fdrawer');
+    drawerWin = window.open('fdrawingv1/index.html', '_blank');
     const sendEditMsg = () => {
       if (!drawerWin) return;
       drawerWin.postMessage({ type: 'editComponent', component: editTarget.comp }, '*');

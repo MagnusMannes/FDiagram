@@ -114,9 +114,9 @@ function loadSession() {
     if (Array.isArray(obj.assemblies)) {
       obj.assemblies.forEach((a, i) => {
         if (Array.isArray(a)) {
-          currentBha.assemblies.push({ name: 'Assembly ' + (i + 1), items: a });
+          currentBha.assemblies.push({ name: 'Assembly ' + (i + 1), items: a, scale: 1 });
         } else if (a && Array.isArray(a.items)) {
-          currentBha.assemblies.push({ name: a.name || 'Assembly ' + (i + 1), items: a.items });
+          currentBha.assemblies.push({ name: a.name || 'Assembly ' + (i + 1), items: a.items, scale: typeof a.scale === 'number' ? a.scale : 1 });
         }
       });
     }
@@ -167,9 +167,9 @@ if (fileInput) {
                     (Array.isArray(data) ? data : []));
         arr.forEach((a, i) => {
           if (Array.isArray(a)) {
-            currentBha.assemblies.push({ name: 'Assembly ' + (i + 1), items: a });
+            currentBha.assemblies.push({ name: 'Assembly ' + (i + 1), items: a, scale: 1 });
           } else if (a && Array.isArray(a.items)) {
-            currentBha.assemblies.push({ name: a.name || 'Assembly ' + (i + 1), items: a.items });
+            currentBha.assemblies.push({ name: a.name || 'Assembly ' + (i + 1), items: a.items, scale: typeof a.scale === 'number' ? a.scale : 1 });
           }
         });
         saveCurrentBha();
@@ -241,7 +241,7 @@ if (assemblyList) {
   renderAssemblyList();
   document.getElementById('addAssyBtn').onclick = () => {
     const num = currentBha.assemblies.length + 1;
-    currentBha.assemblies.push({ name: 'Assembly ' + num, items: [] });
+    currentBha.assemblies.push({ name: 'Assembly ' + num, items: [], scale: 1 });
     currentAssemblyIdx = currentBha.assemblies.length - 1;
     saveCurrentBha();
     storeSession();
@@ -273,7 +273,7 @@ if (bhaCanvas) {
   let resizeStartScale = 1;
 
   const nameInput = document.getElementById('assyTitle');
-  const assyObj = currentBha.assemblies[currentAssemblyIdx] || { name: 'Assembly ' + (currentAssemblyIdx + 1), items: [] };
+  const assyObj = currentBha.assemblies[currentAssemblyIdx] || { name: 'Assembly ' + (currentAssemblyIdx + 1), items: [], scale: 1 };
   nameInput.value = assyObj.name;
   nameInput.addEventListener('input', () => {
     assyObj.name = nameInput.value.trim() || 'Assembly ' + (currentAssemblyIdx + 1);
@@ -838,20 +838,22 @@ if (bhaCanvas) {
       flipped: it.flipped || false,
       scale: typeof it.scale === 'number' ? it.scale : 1
     }));
-    if (placed.length)
-      builderScale = placed[0].scale / DEFAULT_SCALE;
+    if (typeof assyObj.scale === 'number') builderScale = assyObj.scale;
+    else if (placed.length) builderScale = placed[0].scale / DEFAULT_SCALE;
   }
   redraw();
 
   document.getElementById('scaleUpBtn').onclick = () => {
     builderScale *= 1 + SCALE_STEP;
     placed.forEach(p => { p.scale *= 1 + SCALE_STEP; });
+    assyObj.scale = builderScale;
     redraw();
   };
 
   document.getElementById('scaleDownBtn').onclick = () => {
     builderScale = Math.max(0.05 / DEFAULT_SCALE, builderScale * (1 - SCALE_STEP));
     placed.forEach(p => { p.scale = Math.max(0.05, p.scale * (1 - SCALE_STEP)); });
+    assyObj.scale = builderScale;
     redraw();
   };
 
@@ -930,6 +932,7 @@ if (bhaCanvas) {
 
   document.getElementById('backAssyBtn').onclick = () => {
     assyObj.items = placed;
+    assyObj.scale = builderScale;
     saveCurrentBha();
     storeSession();
     // Replace the builder page in history so returning from assemblies

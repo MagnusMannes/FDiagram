@@ -11,5 +11,5 @@ iframe so no extra browser windows are opened.
 
 On the builder page use the **Scale Up** and **Scale Down** buttons to adjust
 the size of every component on the canvas. Each click changes the component
-scale by 10%. Newly dropped components now use the current scale so they match
-the rest of the assembly.
+scale by 10%. Assemblies remember the active scale so any components you drop
+later use the same size as the rest of the assembly.

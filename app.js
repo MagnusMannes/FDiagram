@@ -257,7 +257,7 @@ if (assemblyList) {
 
 // ───── Builder page ─────
 const bhaCanvas = document.getElementById('bhaCanvas');
-if (bhaCanvas) {
+function initBuilder(){
   const ctx = bhaCanvas.getContext('2d');
   const dropZone = document.getElementById('dropZone');
   let placed = [];
@@ -867,6 +867,8 @@ if (bhaCanvas) {
     location.replace('assembly.html');
   };
 }
+
+if (bhaCanvas) initBuilder();
 
 // ───── Helpers ─────
 function addComponent(tool) {

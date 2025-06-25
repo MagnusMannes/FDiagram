@@ -261,8 +261,6 @@ if (bhaCanvas) {
   const ctx = bhaCanvas.getContext('2d');
   const dropZone = document.getElementById('dropZone');
   let placed = [];
-  const menu = document.getElementById('contextMenu');
-  let contextItem = null;
   const DEFAULT_SCALE = 0.125;
   const SCALE_STEP = 0.1;
   let builderScale = 1;
@@ -429,75 +427,6 @@ if (bhaCanvas) {
     redraw();
   });
 
-  bhaCanvas.addEventListener('contextmenu', e => {
-    e.preventDefault();
-    const rect = bhaCanvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    contextItem = null;
-    for (let i = placed.length - 1; i >= 0; i--) {
-      const it = placed[i];
-      const b = getComponentBounds(it.comp);
-      const minX = it.x + b.minX * it.scale;
-      const maxX = it.x + b.maxX * it.scale;
-      const minY = it.y + b.minY * it.scale;
-      const maxY = it.y + b.maxY * it.scale;
-      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
-        contextItem = it;
-        break;
-      }
-    }
-    if (!contextItem) { menu.style.display = 'none'; return; }
-
-    const zoneRect = dropZone.getBoundingClientRect();
-    menu.style.left = (e.clientX - zoneRect.left + dropZone.scrollLeft) + 'px';
-    menu.style.top = (e.clientY - zoneRect.top + dropZone.scrollTop) + 'px';
-
-    const topEnabled = hasTopThread(contextItem.comp);
-    const bottomEnabled = hasBottomThread(contextItem.comp);
-    document.getElementById('toggleTopThread').textContent =
-      (topEnabled ? 'Disable' : 'Enable') + ' uphole thread';
-    document.getElementById('toggleBottomThread').textContent =
-      (bottomEnabled ? 'Disable' : 'Enable') + ' downhole thread';
-
-    menu.style.display = 'block';
-  });
-
-  window.addEventListener('click', () => { menu.style.display = 'none'; });
-
-  document.getElementById('changeColorMenu').addEventListener('click', () => {
-    if (!contextItem) return;
-    const c = prompt('Enter colour (e.g., #ff0000):', contextItem.comp.parts[0].color || '#cccccc');
-    if (c) {
-      contextItem.comp.parts.forEach(p => { p.color = c; });
-      redraw();
-    }
-    menu.style.display = 'none';
-  });
-
-  document.getElementById('toggleTopThread').addEventListener('click', () => {
-    if (contextItem) {
-      toggleThread(contextItem.comp, 'top');
-      redraw();
-    }
-    menu.style.display = 'none';
-  });
-
-  document.getElementById('toggleBottomThread').addEventListener('click', () => {
-    if (contextItem) {
-      toggleThread(contextItem.comp, 'bottom');
-      redraw();
-    }
-    menu.style.display = 'none';
-  });
-
-  document.getElementById('flipMenu').addEventListener('click', () => {
-    if (contextItem) {
-      contextItem.flipped = !contextItem.flipped;
-      redraw();
-    }
-    menu.style.display = 'none';
-  });
 
   function normalizeComponent(comp) {
     if (!comp || !Array.isArray(comp.parts)) return comp;
@@ -632,7 +561,8 @@ if (bhaCanvas) {
       ctx.moveTo(pts[0].x, pts[0].y);
       for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
       ctx.closePath();
-      ctx.fillStyle = type === 'BOX' ? '#b3b3b3' : '#cccccc';
+      const baseColor = type === 'BOX' ? '#b3b3b3' : '#cccccc';
+      ctx.fillStyle = cylinderGradient(ctx, baseColor, p.x, p.width);
       if (type === 'BOX') {
         ctx.strokeStyle = '#555';
         ctx.lineWidth = 1;

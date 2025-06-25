@@ -513,6 +513,9 @@ document.getElementById("exportBtn").addEventListener("click", () => {
     .replace(/[^a-z0-9_-]/gi, "_");
   a.download = `${safeName}.json`;
   a.click();
+  if (window.opener) {
+    window.opener.postMessage({ type: 'newComponent', component: data }, '*');
+  }
 });
 
 document.getElementById("importBtn").addEventListener("click", () =>

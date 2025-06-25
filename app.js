@@ -298,6 +298,23 @@ if (bhaCanvas) {
     });
   });
 
+  const newComponentBtn = document.getElementById('newComponentBtn');
+  let drawerWin = null;
+  if (newComponentBtn) {
+    newComponentBtn.onclick = () => {
+      drawerWin = window.open('fdrawingv1/index.html', 'fdrawer');
+    };
+    window.addEventListener('message', e => {
+      if (!drawerWin || e.source !== drawerWin) return;
+      const msg = e.data || {};
+      if (msg.type === 'newComponent' && msg.component) {
+        drawerWin.close();
+        drawerWin = null;
+        addPaletteItem(normalizeComponent(msg.component), document.getElementById('privateList'));
+      }
+    });
+  }
+
   function addPaletteItem(comp, container) {
     const div = document.createElement('div');
     div.className = 'tool-item';

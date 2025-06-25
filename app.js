@@ -300,20 +300,28 @@ if (bhaCanvas) {
 
   const newComponentBtn = document.getElementById('newComponentBtn');
   let drawerWin = null;
+  let editTarget = null;
   if (newComponentBtn) {
     newComponentBtn.onclick = () => {
       drawerWin = window.open('fdrawingv1/index.html', 'fdrawer');
     };
-    window.addEventListener('message', e => {
-      if (!drawerWin || e.source !== drawerWin) return;
-      const msg = e.data || {};
-      if (msg.type === 'newComponent' && msg.component) {
-        drawerWin.close();
-        drawerWin = null;
+  }
+
+  window.addEventListener('message', e => {
+    if (!drawerWin || e.source !== drawerWin) return;
+    const msg = e.data || {};
+    if (msg.type === 'newComponent' && msg.component) {
+      drawerWin.close();
+      drawerWin = null;
+      if (editTarget) {
+        editTarget.comp = normalizeComponent(msg.component);
+        editTarget = null;
+        redraw();
+      } else {
         addPaletteItem(normalizeComponent(msg.component), document.getElementById('privateList'));
       }
-    });
-  }
+    }
+  });
 
   function addPaletteItem(comp, container) {
     const div = document.createElement('div');
@@ -346,6 +354,49 @@ if (bhaCanvas) {
   let dragObj = null;
   let dragOffX = 0;
   let dragOffY = 0;
+
+  const contextMenu = document.getElementById('contextMenu');
+  const modifyItem = document.getElementById('modifyItem');
+  let contextTarget = null;
+
+  bhaCanvas.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const rect = bhaCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    contextTarget = null;
+    for (let i = placed.length - 1; i >= 0; i--) {
+      const it = placed[i];
+      const b = getComponentBounds(it.comp);
+      const minX = it.x + b.minX * it.scale;
+      const maxX = it.x + b.maxX * it.scale;
+      const minY = it.y + b.minY * it.scale;
+      const maxY = it.y + b.maxY * it.scale;
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+        contextTarget = it;
+        break;
+      }
+    }
+    if (contextTarget) {
+      contextMenu.style.left = e.pageX + 'px';
+      contextMenu.style.top = e.pageY + 'px';
+      contextMenu.style.display = 'block';
+    } else {
+      contextMenu.style.display = 'none';
+    }
+  });
+
+  window.addEventListener('click', () => { contextMenu.style.display = 'none'; });
+
+  modifyItem.addEventListener('click', () => {
+    if (!contextTarget) return;
+    contextMenu.style.display = 'none';
+    editTarget = contextTarget;
+    drawerWin = window.open('fdrawingv1/index.html', 'fdrawer');
+    drawerWin.onload = () => {
+      drawerWin.postMessage({ type: 'editComponent', component: editTarget.comp }, '*');
+    };
+  });
 
   function getHandlePos(it) {
     const b = getComponentBounds(it.comp);

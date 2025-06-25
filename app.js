@@ -264,6 +264,7 @@ if (bhaCanvas) {
   const menu = document.getElementById('contextMenu');
   let contextItem = null;
   const DEFAULT_SCALE = 0.125;
+  const SCALE_STEP = 0.1;
   let selectedItem = null;
   let resizeObj = null;
   let resizeAnchor = null;
@@ -838,6 +839,16 @@ if (bhaCanvas) {
     }));
   }
   redraw();
+
+  document.getElementById('scaleUpBtn').onclick = () => {
+    placed.forEach(p => { p.scale *= 1 + SCALE_STEP; });
+    redraw();
+  };
+
+  document.getElementById('scaleDownBtn').onclick = () => {
+    placed.forEach(p => { p.scale = Math.max(0.05, p.scale * (1 - SCALE_STEP)); });
+    redraw();
+  };
 
   function renderForPrint(ctx, scale) {
     const width = bhaCanvas.width * scale;

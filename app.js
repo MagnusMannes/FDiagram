@@ -606,7 +606,7 @@ if (bhaCanvas) {
     });
   }
 
-  function drawConnector(part, pos, type) {
+  function drawConnector(ctx, part, pos, type) {
     if (!CONNECTOR_TEMPLATE) return;
     const scale = (part.width * 0.8) / CONNECTOR_TEMPLATE.width;
     const w = CONNECTOR_TEMPLATE.width * scale;
@@ -689,7 +689,7 @@ if (bhaCanvas) {
     return pts;
   }
 
-  function drawPart(p, offX, offY) {
+  function drawPart(ctx, p, offX, offY) {
     const pts = partPolygonPoints(p, offX, offY);
     if (!pts.length) return;
     ctx.beginPath();
@@ -703,7 +703,7 @@ if (bhaCanvas) {
     ctx.stroke();
   }
 
-  function drawShapes(comp, offX, offY) {
+  function drawShapes(ctx, comp, offX, offY) {
     if (!Array.isArray(comp.drawnShapes)) return;
     comp.drawnShapes.forEach(s => {
       ctx.lineWidth = s.width || 2;
@@ -728,7 +728,7 @@ if (bhaCanvas) {
     });
   }
 
-  function drawComponent(comp, x, y, flipped, scale = 1) {
+  function drawComponent(ctx, comp, x, y, flipped, scale = 1) {
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(scale, scale);
@@ -738,14 +738,14 @@ if (bhaCanvas) {
       ctx.rotate(Math.PI);
       ctx.translate(-b.width / 2, -b.height / 2);
     }
-    comp.parts.forEach(p => drawPart(p, 0, 0));
-    drawShapes(comp, 0, 0);
+    comp.parts.forEach(p => drawPart(ctx, p, 0, 0));
+    drawShapes(ctx, comp, 0, 0);
     comp.parts.forEach(p => {
       const part = { x: (p.x || 0), y: (p.y || 0), width: p.width, height: p.height };
       if (p.topConnector && p.topConnector !== 'none')
-        drawConnector(part, 'top', p.topConnector);
+        drawConnector(ctx, part, 'top', p.topConnector);
       if (p.bottomConnector && p.bottomConnector !== 'none')
-        drawConnector(part, 'bottom', p.bottomConnector);
+        drawConnector(ctx, part, 'bottom', p.bottomConnector);
     });
     ctx.restore();
   }
@@ -823,7 +823,7 @@ if (bhaCanvas) {
     ctx.clearRect(0, 0, bhaCanvas.width, bhaCanvas.height);
     drawFrame();
     placed.forEach(item => {
-      drawComponent(item.comp, item.x, item.y, item.flipped, item.scale || 1);
+      drawComponent(ctx, item.comp, item.x, item.y, item.flipped, item.scale || 1);
       if (item === selectedItem) {
         const h = getHandlePos(item);
         ctx.fillStyle = '#007aff';
@@ -892,7 +892,7 @@ if (bhaCanvas) {
     placed.forEach(item => {
       ctx.save();
       ctx.scale(scale, scale);
-      drawComponent(item.comp, item.x, item.y, item.flipped, item.scale || 1);
+      drawComponent(ctx, item.comp, item.x, item.y, item.flipped, item.scale || 1);
       ctx.restore();
     });
   }

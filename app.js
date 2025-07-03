@@ -395,10 +395,23 @@ if (bhaCanvas) {
     editTarget = contextTarget;
     drawerWin = window.open(FDRAWER_URL, 'fdrawer');
     const sendEditMsg = () => {
-      if (!drawerWin) return;
-      drawerWin.postMessage({ type: 'editComponent', component: editTarget.comp }, '*');
+      if (drawerWin && !drawerWin.closed) {
+        drawerWin.postMessage({ type: 'editComponent', component: editTarget.comp }, '*');
+      }
     };
-    drawerWin.onload = sendEditMsg;
+    if (drawerWin) {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        sendEditMsg();
+        if (!drawerWin || drawerWin.closed || attempts >= 10) {
+          clearInterval(interval);
+        }
+      }, 300);
+      drawerWin.onload = () => {
+        sendEditMsg();
+      };
+    }
   });
 
   function getHandlePos(it) {

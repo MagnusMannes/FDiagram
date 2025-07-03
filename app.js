@@ -412,7 +412,9 @@ if (bhaCanvas) {
       x: ev.offsetX,
       y: ev.offsetY,
       flipped: false,
-      scale: Math.max(0.05, DEFAULT_SCALE * builderScale)
+      scale: Math.max(0.05, DEFAULT_SCALE * builderScale),
+      attachedTo: null,
+      attachedChildren: []
     });
     redraw();
   });
@@ -424,9 +426,14 @@ if (bhaCanvas) {
   const contextMenu = document.getElementById('contextMenu');
   const modifyItem = document.getElementById('modifyItem');
   let contextTarget = null;
+  let rightDragItems = null;
+  let rightDragPrevX = 0;
+  let rightDragPrevY = 0;
+  let rightDragging = false;
 
   bhaCanvas.addEventListener('contextmenu', e => {
     e.preventDefault();
+    if (rightDragging) { rightDragging = false; return; }
     const rect = bhaCanvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -444,8 +451,9 @@ if (bhaCanvas) {
       }
     }
     if (contextTarget) {
-      contextMenu.style.left = e.pageX + 'px';
-      contextMenu.style.top = e.pageY + 'px';
+      const dzRect = dropZone.getBoundingClientRect();
+      contextMenu.style.left = (e.clientX - dzRect.left) + 'px';
+      contextMenu.style.top = (e.clientY - dzRect.top) + 'px';
       contextMenu.style.display = 'block';
     } else {
       contextMenu.style.display = 'none';
@@ -499,10 +507,73 @@ if (bhaCanvas) {
     return Math.hypot(x1 - x2, y1 - y2);
   }
 
+  function getItemBox(it) {
+    const b = getComponentBounds(it.comp);
+    return {
+      left: it.x + b.minX * it.scale,
+      right: it.x + b.maxX * it.scale,
+      top: it.y + b.minY * it.scale,
+      bottom: it.y + b.maxY * it.scale,
+      width: (b.maxX - b.minX) * it.scale,
+      height: (b.maxY - b.minY) * it.scale
+    };
+  }
+
+  function detach(it) {
+    if (it.attachedTo) {
+      const p = it.attachedTo;
+      p.attachedChildren = (p.attachedChildren || []).filter(c => c !== it);
+      it.attachedTo = null;
+    }
+  }
+
+  function attachBelow(child, parent) {
+    if (!child || !parent) return;
+    let cur = parent;
+    while (cur) {
+      if (cur === child) return; // avoid cycles
+      cur = cur.attachedTo;
+    }
+    detach(child);
+    child.attachedTo = parent;
+    parent.attachedChildren = parent.attachedChildren || [];
+    if (!parent.attachedChildren.includes(child)) parent.attachedChildren.push(child);
+  }
+
+  function getRoot(it) {
+    let r = it;
+    while (r && r.attachedTo) r = r.attachedTo;
+    return r;
+  }
+
+  function collectTree(it, arr) {
+    arr.push(it);
+    (it.attachedChildren || []).forEach(c => collectTree(c, arr));
+  }
+
   bhaCanvas.addEventListener('mousedown', e => {
     const rect = bhaCanvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    if (e.button === 2) {
+      for (let i = placed.length - 1; i >= 0; i--) {
+        const it = placed[i];
+        const b = getComponentBounds(it.comp);
+        const minX = it.x + b.minX * it.scale;
+        const maxX = it.x + b.maxX * it.scale;
+        const minY = it.y + b.minY * it.scale;
+        const maxY = it.y + b.maxY * it.scale;
+        if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+          rightDragItems = [];
+          collectTree(getRoot(it), rightDragItems);
+          rightDragPrevX = x;
+          rightDragPrevY = y;
+          return;
+        }
+      }
+      return;
+    }
 
     if (selectedItem) {
       const h = getHandlePos(selectedItem);
@@ -542,6 +613,17 @@ if (bhaCanvas) {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    if (rightDragItems) {
+      const dx = x - rightDragPrevX;
+      const dy = y - rightDragPrevY;
+      rightDragItems.forEach(it => { it.x += dx; it.y += dy; });
+      rightDragPrevX = x;
+      rightDragPrevY = y;
+      rightDragging = true;
+      redraw();
+      return;
+    }
+
     if (resizeObj) {
       const d = dist(x, y, resizeAnchor.x, resizeAnchor.y);
       if (resizeStartDist > 0) {
@@ -558,6 +640,11 @@ if (bhaCanvas) {
   });
 
   window.addEventListener('mouseup', () => {
+    if (rightDragItems) {
+      rightDragItems = null;
+      rightDragging = false;
+      return;
+    }
     if (resizeObj) {
       resizeObj = null;
       redraw();
@@ -572,6 +659,29 @@ if (bhaCanvas) {
     if (maxX < 0 || minX > bhaCanvas.width || maxY < 0 || minY > bhaCanvas.height) {
       placed = placed.filter(p => p !== dragObj);
     }
+
+    // snapping logic
+    const box = getItemBox(dragObj);
+    let best = null;
+    let bestDist = 20;
+    placed.forEach(o => {
+      if (o === dragObj) return;
+      const ob = getItemBox(o);
+      const dist = Math.abs(box.top - ob.bottom);
+      const centerDiff = Math.abs((box.left + box.right)/2 - (ob.left + ob.right)/2);
+      if (dist < bestDist && centerDiff < ob.width / 2) {
+        best = o; bestDist = dist;
+      }
+    });
+    if (best) {
+      const pb = getItemBox(best);
+      dragObj.x += ( (pb.left + pb.right)/2 - (box.left + box.right)/2 );
+      dragObj.y += pb.bottom - box.top;
+      attachBelow(dragObj, best);
+    } else {
+      detach(dragObj);
+    }
+
     dragObj = null;
     redraw();
   });
@@ -915,7 +1025,9 @@ if (bhaCanvas) {
       x: it.x,
       y: it.y,
       flipped: it.flipped || false,
-      scale: typeof it.scale === 'number' ? it.scale : 1
+      scale: typeof it.scale === 'number' ? it.scale : 1,
+      attachedTo: null,
+      attachedChildren: []
     }));
     if (placed.length)
       builderScale = placed[0].scale / DEFAULT_SCALE;

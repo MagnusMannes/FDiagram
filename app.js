@@ -271,6 +271,30 @@ if (bhaCanvas) {
   let resizeStartDist = 0;
   let resizeStartScale = 1;
 
+  const previewCanvas = document.getElementById('previewCanvas');
+  const previewCtx = previewCanvas ? previewCanvas.getContext('2d') : null;
+
+  function showPreview(comp) {
+    if (!previewCanvas || !previewCtx) return;
+    previewCanvas.hidden = false;
+    previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    const b = getComponentBounds(comp);
+    const scale = Math.min(
+      (previewCanvas.width - 20) / b.width,
+      (previewCanvas.height - 20) / b.height
+    );
+    previewCtx.save();
+    previewCtx.translate(previewCanvas.width / 2, previewCanvas.height / 2);
+    previewCtx.scale(scale, scale);
+    previewCtx.translate(-b.minX - b.width / 2, -b.minY - b.height / 2);
+    drawComponent(previewCtx, comp, 0, 0, false, 1);
+    previewCtx.restore();
+  }
+
+  function hidePreview() {
+    if (previewCanvas) previewCanvas.hidden = true;
+  }
+
   const nameInput = document.getElementById('assyTitle');
   const assyObj = currentBha.assemblies[currentAssemblyIdx] || { name: 'Assembly ' + (currentAssemblyIdx + 1), items: [] };
   nameInput.value = assyObj.name;
@@ -352,6 +376,8 @@ if (bhaCanvas) {
     div.addEventListener('dragstart', ev => {
       ev.dataTransfer.setData('application/json', div.dataset.comp);
     });
+    div.addEventListener('mouseenter', () => showPreview(comp));
+    div.addEventListener('mouseleave', hidePreview);
     if (isPrivate) {
       div.style.display = 'flex';
       div.style.alignItems = 'center';

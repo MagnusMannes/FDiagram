@@ -58,3 +58,6 @@ button:hover{filter:brightness(.95);}
 /*  ─── Canvas ─────────────────────────────────────────── */
 #bhaCanvas{background:#fff;border:1px solid #dcdce0;margin-bottom:1rem;height:100%;aspect-ratio:210/297;width:auto;max-height:calc(100vh - 6rem);}
 
+/*  ─── Component Preview ─────────────────────────────── */
+.preview-canvas{position:absolute;top:1rem;right:1rem;width:200px;height:200px;border:1px solid #dcdce0;background:#fff;pointer-events:none;}
+

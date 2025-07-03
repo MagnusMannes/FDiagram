@@ -20,6 +20,7 @@ button:hover{filter:brightness(.95);}
 .list button{margin:0.3rem 0;}
 .list div{display:flex;justify-content:space-between;}
 .back-btn{margin-top:1rem;}
+.centered>button{margin:0.5rem 0;}
 .view.builder .back-btn{position:absolute;bottom:1rem;left:1rem;margin-top:0;}
 .view.builder .print-btn{position:absolute;bottom:4rem;left:1rem;}
 .view.builder .scale-down-btn{position:absolute;bottom:7rem;left:1rem;}
@@ -49,7 +50,7 @@ button:hover{filter:brightness(.95);}
 
 /*  ─── Load Page Table ───────────────────────────────── */
 .load-list{width:100%;max-width:600px;}
-.load-row{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:.5rem;}
+.load-row{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:.5rem;margin-bottom:.5rem;}
 .load-row button{margin:0;}
 
 /*  ─── Canvas ─────────────────────────────────────────── */

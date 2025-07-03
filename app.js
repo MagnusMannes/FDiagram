@@ -264,6 +264,7 @@ if (bhaCanvas) {
   const DEFAULT_SCALE = 0.125;
   const SCALE_STEP = 0.1;
   let builderScale = 1;
+  const FDRAWER_URL = 'https://magnusmannes.github.io/FDrawer/';
   let selectedItem = null;
   let resizeObj = null;
   let resizeAnchor = null;
@@ -303,7 +304,7 @@ if (bhaCanvas) {
   let editTarget = null;
   if (newComponentBtn) {
     newComponentBtn.onclick = () => {
-      drawerWin = window.open('fdrawingv1/index.html', 'fdrawer');
+      drawerWin = window.open(FDRAWER_URL, 'fdrawer');
     };
   }
 
@@ -392,16 +393,12 @@ if (bhaCanvas) {
     if (!contextTarget) return;
     contextMenu.style.display = 'none';
     editTarget = contextTarget;
-    drawerWin = window.open('fdrawingv1/index.html', 'fdrawer');
+    drawerWin = window.open(FDRAWER_URL, 'fdrawer');
     const sendEditMsg = () => {
       if (!drawerWin) return;
       drawerWin.postMessage({ type: 'editComponent', component: editTarget.comp }, '*');
     };
-    if (drawerWin.document && drawerWin.document.readyState === 'complete') {
-      sendEditMsg();
-    } else {
-      drawerWin.onload = sendEditMsg;
-    }
+    drawerWin.onload = sendEditMsg;
   });
 
   function getHandlePos(it) {

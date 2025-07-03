@@ -519,6 +519,18 @@ if (bhaCanvas) {
     };
   }
 
+  function getItemBodyBox(it) {
+    const b = getComponentBodyBounds(it.comp);
+    return {
+      left: it.x + b.minX * it.scale,
+      right: it.x + b.maxX * it.scale,
+      top: it.y + b.minY * it.scale,
+      bottom: it.y + b.maxY * it.scale,
+      width: (b.maxX - b.minX) * it.scale,
+      height: (b.maxY - b.minY) * it.scale
+    };
+  }
+
   function detach(it) {
     if (it.attachedTo) {
       const p = it.attachedTo;
@@ -660,13 +672,13 @@ if (bhaCanvas) {
       placed = placed.filter(p => p !== dragObj);
     }
 
-    // snapping logic
-    const box = getItemBox(dragObj);
+    // snapping logic using body bounds
+    const box = getItemBodyBox(dragObj);
     let best = null;
     let bestDist = 20;
     placed.forEach(o => {
       if (o === dragObj) return;
-      const ob = getItemBox(o);
+      const ob = getItemBodyBox(o);
       const dist = Math.abs(box.top - ob.bottom);
       const centerDiff = Math.abs((box.left + box.right)/2 - (ob.left + ob.right)/2);
       if (dist < bestDist && centerDiff < ob.width / 2) {
@@ -674,7 +686,7 @@ if (bhaCanvas) {
       }
     });
     if (best) {
-      const pb = getItemBox(best);
+      const pb = getItemBodyBox(best);
       dragObj.x += ( (pb.left + pb.right)/2 - (box.left + box.right)/2 );
       dragObj.y += pb.bottom - box.top;
       attachBelow(dragObj, best);
@@ -975,6 +987,38 @@ if (bhaCanvas) {
     if (minX === Infinity) { minX = minY = 0; maxX = maxY = 0; }
     comp._bounds = {minX, minY, maxX, maxY, width:maxX-minX, height:maxY-minY};
     return comp._bounds;
+  }
+
+  function getComponentBodyBounds(comp) {
+    if (comp._bodyBounds) return comp._bodyBounds;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    comp.parts.forEach(p => {
+      partPolygonPoints(p, 0, 0).forEach(pt => {
+        minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
+        maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
+      });
+    });
+    (comp.drawnShapes || []).forEach(s => {
+      if (s.type === 'line') {
+        minX = Math.min(minX, s.x1, s.x2);
+        maxX = Math.max(maxX, s.x1, s.x2);
+        minY = Math.min(minY, s.y1, s.y2);
+        maxY = Math.max(maxY, s.y1, s.y2);
+      } else if (s.type === 'circle') {
+        minX = Math.min(minX, s.cx - s.r);
+        maxX = Math.max(maxX, s.cx + s.r);
+        minY = Math.min(minY, s.cy - s.r);
+        maxY = Math.max(maxY, s.cy + s.r);
+      } else if (s.type === 'curve') {
+        [s.p0, s.p1, s.p2].forEach(pt => {
+          minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+          minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y);
+        });
+      }
+    });
+    if (minX === Infinity) { minX = minY = 0; maxX = maxY = 0; }
+    comp._bodyBounds = {minX, minY, maxX, maxY, width:maxX-minX, height:maxY-minY};
+    return comp._bodyBounds;
   }
 
   function drawFrame() {

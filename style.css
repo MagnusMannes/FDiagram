@@ -36,9 +36,11 @@ button:hover{filter:brightness(.95);}
 
 /*  ─── Sidebar (Item Palette) ──────────────────────────── */
 .sidebar{width:260px;background:#fff;border-right:1px solid #dcdce0;padding:1rem;overflow-y:auto;}
-.tool-item{border:1px solid #dcdce0;border-radius:10px;padding:.6rem;margin-bottom:.6rem;background:#fefefe;cursor:grab;}
+.tool-item{border:1px solid #dcdce0;border-radius:10px;padding:.6rem;margin-bottom:.6rem;background:#fefefe;cursor:grab;display:flex;align-items:center;}
 .tool-item:active{cursor:grabbing;opacity:.8;}
 .tool-item small{color:#6e6e73;}
+.tool-item .del-btn{background:#ff3b30;color:#fff;border:0;border-radius:6px;padding:.3rem .6rem;margin-right:.5rem;cursor:pointer;}
+.tool-item .del-btn:hover{filter:brightness(.95);}
 
 /*  ─── Drop Zone (Assembly Stack) ──────────────────────── */
 .dropzone{flex:1;height:100%;padding:1rem;background:#e9f5ff;display:flex;flex-direction:column;align-items:center;overflow:auto;position:relative;}

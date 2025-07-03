@@ -287,13 +287,31 @@ if (bhaCanvas) {
       }
     });
 
+  const privateListEl = document.getElementById('privateList');
+  let privateComponents = [];
+
+  function loadPrivateComponents() {
+    try {
+      privateComponents = JSON.parse(localStorage.getItem('privateComponents') || '[]');
+    } catch { privateComponents = []; }
+    privateListEl.innerHTML = '';
+    privateComponents.forEach(c => addPaletteItem(c, privateListEl, {isPrivate: true, store: false}));
+  }
+
+  function savePrivateComponents() {
+    localStorage.setItem('privateComponents', JSON.stringify(privateComponents));
+  }
+
+  loadPrivateComponents();
+
   const privateInput = document.getElementById('privateInput');
   privateInput.addEventListener('change', e => {
-    const list = document.getElementById('privateList');
     Array.from(e.target.files).forEach(file => {
       const reader = new FileReader();
       reader.onload = () => {
-        try { addPaletteItem(JSON.parse(reader.result), list); } catch {}
+        try {
+          addPaletteItem(JSON.parse(reader.result), privateListEl, {isPrivate: true, store: true});
+        } catch {}
       };
       reader.readAsText(file);
     });
@@ -319,12 +337,13 @@ if (bhaCanvas) {
         editTarget = null;
         redraw();
       } else {
-        addPaletteItem(normalizeComponent(msg.component), document.getElementById('privateList'));
+        addPaletteItem(normalizeComponent(msg.component), privateListEl, {isPrivate: true, store: true});
       }
     }
   });
 
-  function addPaletteItem(comp, container) {
+  function addPaletteItem(comp, container, opts = {}) {
+    const { isPrivate = false, store = false } = opts;
     const div = document.createElement('div');
     div.className = 'tool-item';
     div.draggable = true;
@@ -333,6 +352,26 @@ if (bhaCanvas) {
     div.addEventListener('dragstart', ev => {
       ev.dataTransfer.setData('application/json', div.dataset.comp);
     });
+    if (isPrivate) {
+      div.style.display = 'flex';
+      div.style.alignItems = 'center';
+      const del = document.createElement('button');
+      del.className = 'del-btn';
+      del.textContent = '×';
+      del.draggable = false;
+      del.addEventListener('click', ev => {
+        ev.stopPropagation();
+        if (!confirm('Delete this component?')) return;
+        container.removeChild(div);
+        privateComponents = privateComponents.filter(c => JSON.stringify(c) !== div.dataset.comp);
+        savePrivateComponents();
+      });
+      div.prepend(del);
+      if (store) {
+        privateComponents.push(comp);
+        savePrivateComponents();
+      }
+    }
     container.appendChild(div);
   }
 

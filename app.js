@@ -660,25 +660,12 @@ if (bhaCanvas) {
       placed = placed.filter(p => p !== dragObj);
     }
 
-    // snapping logic - allow attaching above or below nearby item
-    const box = getItemBox(dragObj);
-    let best = null;
-    let bestDist = 20;
-    let attachAbove = false; // true if dragObj should become parent
+
     placed.forEach(o => {
       if (o === dragObj) return;
       const ob = getItemBox(o);
       const centerDiff = Math.abs((box.left + box.right) / 2 - (ob.left + ob.right) / 2);
-      if (centerDiff > Math.max(ob.width, box.width) / 2) return;
 
-      const distBelow = Math.abs(box.top - ob.bottom);
-      if (distBelow < bestDist) {
-        best = o; bestDist = distBelow; attachAbove = false;
-      }
-
-      const distAbove = Math.abs(box.bottom - ob.top);
-      if (distAbove < bestDist) {
-        best = o; bestDist = distAbove; attachAbove = true;
       }
     });
 

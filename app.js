@@ -519,6 +519,53 @@ if (bhaCanvas) {
     };
   }
 
+  // get the Y coordinate (in local component space) of the connection surface
+  // either at the top or bottom. If no connector is defined, fall back to the
+  // extreme top/bottom of all parts.
+  function connectorLocalY(comp, pos) {
+    let val = pos === 'top' ? Infinity : -Infinity;
+    comp.parts.forEach(p => {
+      if (pos === 'top') {
+        if (p.topConnector && p.topConnector !== 'none') {
+          val = Math.min(val, p.y);
+        }
+      } else {
+        if (p.bottomConnector && p.bottomConnector !== 'none') {
+          val = Math.max(val, p.y + p.height);
+        }
+      }
+    });
+    if (pos === 'top') {
+      if (val === Infinity) val = Math.min(...comp.parts.map(p => p.y));
+    } else {
+      if (val === -Infinity) val = Math.max(...comp.parts.map(p => p.y + p.height));
+    }
+    return val;
+  }
+
+  // like getItemBox but the top/bottom values correspond to the connection
+  // surfaces so snapping aligns connectors correctly
+  function getSnapBox(it) {
+    const b = getItemBox(it);
+    const cb = getComponentBounds(it.comp);
+    let top = connectorLocalY(it.comp, 'top');
+    let bottom = connectorLocalY(it.comp, 'bottom');
+    if (it.flipped) {
+      const h = cb.height;
+      const origTop = top;
+      top = h - bottom;
+      bottom = h - origTop;
+    }
+    return {
+      left: b.left,
+      right: b.right,
+      top: it.y + top * it.scale,
+      bottom: it.y + bottom * it.scale,
+      width: b.width,
+      height: (bottom - top) * it.scale
+    };
+  }
+
   function detach(it) {
     if (it.attachedTo) {
       const p = it.attachedTo;
@@ -661,13 +708,13 @@ if (bhaCanvas) {
     }
 
     // snapping logic - allow attaching above or below nearby item
-    const box = getItemBox(dragObj);
+    const box = getSnapBox(dragObj);
     let best = null;
     let bestDist = 20;
     let attachAbove = false; // true if dragObj should become parent
     placed.forEach(o => {
       if (o === dragObj) return;
-      const ob = getItemBox(o);
+      const ob = getSnapBox(o);
       const centerDiff = Math.abs((box.left + box.right) / 2 - (ob.left + ob.right) / 2);
       if (centerDiff > Math.max(ob.width, box.width) / 2) return;
 
@@ -683,7 +730,7 @@ if (bhaCanvas) {
     });
 
     if (best) {
-      const pb = getItemBox(best);
+      const pb = getSnapBox(best);
       dragObj.x += ( (pb.left + pb.right) / 2 - (box.left + box.right) / 2 );
       if (attachAbove) {
         dragObj.y += pb.top - box.bottom;

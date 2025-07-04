@@ -660,25 +660,12 @@ if (bhaCanvas) {
       placed = placed.filter(p => p !== dragObj);
     }
 
-    // snapping logic - align when thread connectors overlap
-    const box = getItemBox(dragObj);
-    let best = null;
-    let bestDist = 20;
-    let attachAbove = false; // true if dragObj should attach above best
+
     placed.forEach(o => {
       if (o === dragObj) return;
       const ob = getItemBox(o);
       const centerDiff = Math.abs((box.left + box.right) / 2 - (ob.left + ob.right) / 2);
-      if (centerDiff > 20) return;
 
-      if (hasBottomThread(dragObj.comp) && hasTopThread(o.comp)) {
-        const d = Math.abs(box.bottom - ob.top);
-        if (d < bestDist) { best = o; bestDist = d; attachAbove = false; }
-      }
-
-      if (hasTopThread(dragObj.comp) && hasBottomThread(o.comp)) {
-        const d = Math.abs(box.top - ob.bottom);
-        if (d < bestDist) { best = o; bestDist = d; attachAbove = true; }
       }
     });
 

@@ -529,15 +529,29 @@ if (bhaCanvas) {
   function hitTest(it, x, y) {
     const b = getComponentBounds(it.comp);
     const scale = it.scale;
+    let bbMinX = Infinity, bbMinY = Infinity, bbMaxX = -Infinity, bbMaxY = -Infinity;
     for (const p of it.comp.parts) {
       const pts = partPolygonPoints(p, 0, 0).map(pt => {
         let px = it.flipped ? b.width - pt.x : pt.x;
         let py = it.flipped ? b.height - pt.y : pt.y;
-        return { x: it.x + px * scale, y: it.y + py * scale };
+        px = it.x + px * scale;
+        py = it.y + py * scale;
+        if (px < bbMinX) bbMinX = px;
+        if (py < bbMinY) bbMinY = py;
+        if (px > bbMaxX) bbMaxX = px;
+        if (py > bbMaxY) bbMaxY = py;
+        return { x: px, y: py };
       });
       if (pointInPolygon(pts, x, y)) return true;
     }
-    return false;
+    if (bbMinX === Infinity) return false;
+    const margin = 4;
+    return (
+      x >= bbMinX - margin &&
+      x <= bbMaxX + margin &&
+      y >= bbMinY - margin &&
+      y <= bbMaxY + margin
+    );
   }
 
   // get the Y coordinate (in local component space) of the connection surface

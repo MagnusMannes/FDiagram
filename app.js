@@ -440,12 +440,7 @@ if (bhaCanvas) {
     contextTarget = null;
     for (let i = placed.length - 1; i >= 0; i--) {
       const it = placed[i];
-      const b = getComponentBounds(it.comp);
-      const minX = it.x + b.minX * it.scale;
-      const maxX = it.x + b.maxX * it.scale;
-      const minY = it.y + b.minY * it.scale;
-      const maxY = it.y + b.maxY * it.scale;
-      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+      if (hitTest(it, x, y)) {
         contextTarget = it;
         break;
       }
@@ -517,6 +512,32 @@ if (bhaCanvas) {
       width: (b.maxX - b.minX) * it.scale,
       height: (b.maxY - b.minY) * it.scale
     };
+  }
+
+  function pointInPolygon(pts, x, y) {
+    let inside = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const xi = pts[i].x, yi = pts[i].y;
+      const xj = pts[j].x, yj = pts[j].y;
+      const intersect = ((yi > y) !== (yj > y)) &&
+        (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  function hitTest(it, x, y) {
+    const b = getComponentBounds(it.comp);
+    const scale = it.scale;
+    for (const p of it.comp.parts) {
+      const pts = partPolygonPoints(p, 0, 0).map(pt => {
+        let px = it.flipped ? b.width - pt.x : pt.x;
+        let py = it.flipped ? b.height - pt.y : pt.y;
+        return { x: it.x + px * scale, y: it.y + py * scale };
+      });
+      if (pointInPolygon(pts, x, y)) return true;
+    }
+    return false;
   }
 
   // get the Y coordinate (in local component space) of the connection surface
@@ -605,19 +626,14 @@ if (bhaCanvas) {
 
     if (e.button === 2) {
       for (let i = placed.length - 1; i >= 0; i--) {
-        const it = placed[i];
-        const b = getComponentBounds(it.comp);
-        const minX = it.x + b.minX * it.scale;
-        const maxX = it.x + b.maxX * it.scale;
-        const minY = it.y + b.minY * it.scale;
-        const maxY = it.y + b.maxY * it.scale;
-        if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
-          rightDragItems = [];
-          collectTree(getRoot(it), rightDragItems);
-          rightDragPrevX = x;
-          rightDragPrevY = y;
-          return;
-        }
+      const it = placed[i];
+      if (hitTest(it, x, y)) {
+        rightDragItems = [];
+        collectTree(getRoot(it), rightDragItems);
+        rightDragPrevX = x;
+        rightDragPrevY = y;
+        return;
+      }
       }
       return;
     }
@@ -636,12 +652,7 @@ if (bhaCanvas) {
     selectedItem = null;
     for (let i = placed.length - 1; i >= 0; i--) {
       const it = placed[i];
-      const b = getComponentBounds(it.comp);
-      const minX = it.x + b.minX * it.scale;
-      const maxX = it.x + b.maxX * it.scale;
-      const minY = it.y + b.minY * it.scale;
-      const maxY = it.y + b.maxY * it.scale;
-      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+      if (hitTest(it, x, y)) {
         dragObj = it;
         selectedItem = it;
         dragOffX = x - it.x;

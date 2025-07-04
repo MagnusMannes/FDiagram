@@ -660,18 +660,32 @@ if (bhaCanvas) {
       placed = placed.filter(p => p !== dragObj);
     }
 
+    const box = getItemBox(dragObj);
+    let best = null;
+    let attachAbove = false;
+    let bestDist = Infinity;
+    const SNAP_DIST = 20;
 
     placed.forEach(o => {
       if (o === dragObj) return;
       const ob = getItemBox(o);
       const centerDiff = Math.abs((box.left + box.right) / 2 - (ob.left + ob.right) / 2);
-
+      if (centerDiff > SNAP_DIST) return;
+      const topDiff = Math.abs(box.bottom - ob.top);
+      const bottomDiff = Math.abs(box.top - ob.bottom);
+      let verticalDiff = topDiff;
+      let above = true;
+      if (bottomDiff < topDiff) { verticalDiff = bottomDiff; above = false; }
+      if (verticalDiff <= SNAP_DIST && verticalDiff + centerDiff < bestDist) {
+        best = o;
+        attachAbove = above;
+        bestDist = verticalDiff + centerDiff;
       }
     });
 
     if (best) {
       const pb = getItemBox(best);
-      dragObj.x += ( (pb.left + pb.right) / 2 - (box.left + box.right) / 2 );
+      dragObj.x += ((pb.left + pb.right) / 2 - (box.left + box.right) / 2);
       if (attachAbove) {
         dragObj.y += pb.top - box.bottom;
         attachBelow(best, dragObj);

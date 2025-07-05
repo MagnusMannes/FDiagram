@@ -773,16 +773,10 @@ if (bhaCanvas) {
     ctx.fillStyle = '#000';
     ctx.font = (12 * scale * textScale) + 'px sans-serif';
     const rawVal = dia.item.comp.od !== undefined ? dia.item.comp.od : (b.width * dia.item.scale) / 12;
-    const val = '\u00F8' + formatTwelfthInches(rawVal);
-    if (dia.style === 'singleLeft') {
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(val, left - DIAMETER_OFFSET * scale - 4 * scale, y);
-    } else {
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(val, right + 4 * scale, y);
-    }
+    const val = '\u00F8 ' + formatTwelfthInches(rawVal);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(val, left - DIAMETER_OFFSET * scale - 4 * scale, y);
   }
 
   function diameterHitTest(dia, x, y) {
@@ -799,23 +793,15 @@ if (bhaCanvas) {
     if (Math.abs(y - lineY) <= 6 && x >= left && x <= right) return true;
 
     const rawVal = dia.item.comp.od !== undefined ? dia.item.comp.od : (b.width * dia.item.scale) / 12;
-    const val = '\u00F8' + formatTwelfthInches(rawVal);
+    const val = '\u00F8 ' + formatTwelfthInches(rawVal);
     ctx.font = '12px sans-serif';
     const textWidth = ctx.measureText(val).width;
     const textHeight = 12;
-    if (dia.style === 'singleLeft') {
-      const tx2 = dia.item.x + b.minX * dia.item.scale - DIAMETER_OFFSET - 4;
-      const tx1 = tx2 - textWidth - 4;
-      const ty1 = lineY - textHeight / 2 - 2;
-      const ty2 = lineY + textHeight / 2 + 2;
-      if (x >= tx1 && x <= tx2 && y >= ty1 && y <= ty2) return true;
-    } else {
-      const tx1 = dia.item.x + b.maxX * dia.item.scale + 4;
-      const tx2 = tx1 + textWidth + 4;
-      const ty1 = lineY - textHeight / 2 - 2;
-      const ty2 = lineY + textHeight / 2 + 2;
-      if (x >= tx1 && x <= tx2 && y >= ty1 && y <= ty2) return true;
-    }
+    const tx2 = dia.item.x + b.minX * dia.item.scale - DIAMETER_OFFSET - 4;
+    const tx1 = tx2 - textWidth - 4;
+    const ty1 = lineY - textHeight / 2 - 2;
+    const ty2 = lineY + textHeight / 2 + 2;
+    if (x >= tx1 && x <= tx2 && y >= ty1 && y <= ty2) return true;
     return false;
   }
 

@@ -27,6 +27,7 @@ button:hover{filter:brightness(.95);}
 .view.builder .scale-down-btn{position:absolute;bottom:7rem;left:1rem;}
 .view.builder .scale-up-btn{position:absolute;bottom:10rem;left:1rem;}
 .view.builder .add-length-btn{position:absolute;bottom:13rem;left:1rem;}
+.view.builder .add-diameter-btn{position:absolute;bottom:16rem;left:1rem;}
 
 /* ─── Context Menu ─────────────────────────────────────── */
 .context-menu{position:absolute;display:none;background:#fff;border:1px solid #ccc;list-style:none;padding:0;margin:0;z-index:1000;}

@@ -278,6 +278,8 @@ if (bhaCanvas) {
   let lengthMode = false;
   let lengthPoints = [];
   const dimensions = [];
+  let previewMouseX = 0;
+  let previewMouseY = 0;
 
   function showPreview(comp) {
     if (!previewCanvas || !previewCtx) return;
@@ -430,7 +432,9 @@ if (bhaCanvas) {
 
   const contextMenu = document.getElementById('contextMenu');
   const modifyItem = document.getElementById('modifyItem');
+  const removeLengthItem = document.getElementById('removeLengthItem');
   let contextTarget = null;
+  let dimensionContextTarget = null;
   let rightDragItems = null;
   let rightDragPrevX = 0;
   let rightDragPrevY = 0;
@@ -443,14 +447,20 @@ if (bhaCanvas) {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     contextTarget = null;
+    dimensionContextTarget = null;
     for (let i = placed.length - 1; i >= 0; i--) {
       const it = placed[i];
-      if (hitTest(it, x, y)) {
-        contextTarget = it;
-        break;
+      if (hitTest(it, x, y)) { contextTarget = it; break; }
+    }
+    if (!contextTarget) {
+      for (let i = 0; i < dimensions.length; i++) {
+        if (dimensionHitTest(dimensions[i], x, y)) { dimensionContextTarget = i; break; }
       }
     }
-    if (contextTarget) {
+    if (contextTarget || dimensionContextTarget !== null) {
+      modifyItem.style.display = contextTarget ? 'block' : 'none';
+      if (removeLengthItem)
+        removeLengthItem.style.display = dimensionContextTarget !== null ? 'block' : 'none';
       const dzRect = dropZone.getBoundingClientRect();
       contextMenu.style.left = (e.clientX - dzRect.left) + 'px';
       contextMenu.style.top = (e.clientY - dzRect.top) + 'px';
@@ -486,6 +496,16 @@ if (bhaCanvas) {
       };
     }
   });
+
+  if (removeLengthItem) {
+    removeLengthItem.addEventListener('click', () => {
+      if (dimensionContextTarget === null) return;
+      dimensions.splice(dimensionContextTarget, 1);
+      dimensionContextTarget = null;
+      contextMenu.style.display = 'none';
+      redraw();
+    });
+  }
 
   function getHandlePos(it) {
     const b = getComponentBounds(it.comp);
@@ -622,6 +642,30 @@ if (bhaCanvas) {
     }
   }
 
+  function dimensionHitTest(dim, x, y) {
+    const p1 = localToCanvas(dim.p1.item, dim.p1.x, dim.p1.y);
+    const p2 = localToCanvas(dim.p2.item, dim.p2.x, dim.p2.y);
+    const lineX = Math.max(p1.x, p2.x) + 20;
+    const top = Math.min(p1.y, p2.y);
+    const bottom = Math.max(p1.y, p2.y);
+    const near = 6;
+    function distToSeg(px, py, x1, y1, x2, y2) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const lenSq = dx * dx + dy * dy;
+      let t = 0;
+      if (lenSq > 0) t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+      const lx = x1 + t * dx;
+      const ly = y1 + t * dy;
+      return Math.hypot(px - lx, py - ly);
+    }
+    if (Math.abs(x - lineX) <= near && y >= top - near && y <= bottom + near) return true;
+    if (distToSeg(x, y, p1.x, p1.y, lineX, p1.y) <= near) return true;
+    if (distToSeg(x, y, p2.x, p2.y, lineX, p2.y) <= near) return true;
+    return false;
+  }
+
   // get the Y coordinate (in local component space) of the connection surface
   // either at the top or bottom. If no connector is defined, fall back to the
   // extreme top/bottom of all parts.
@@ -705,6 +749,8 @@ if (bhaCanvas) {
     const rect = bhaCanvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+    previewMouseX = x;
+    previewMouseY = y;
 
     if (lengthMode && e.button === 0) {
       let target = null;
@@ -774,6 +820,12 @@ if (bhaCanvas) {
     const rect = bhaCanvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    previewMouseX = x;
+    previewMouseY = y;
+    if (lengthMode && lengthPoints.length === 1 && !dragObj && !resizeObj && !rightDragItems) {
+      redraw();
+    }
 
     if (rightDragItems) {
       const dx = x - rightDragPrevX;
@@ -1193,6 +1245,21 @@ if (bhaCanvas) {
         ctx.fill();
       }
     });
+    if (lengthMode && lengthPoints.length === 1) {
+      const p1 = localToCanvas(lengthPoints[0].item, lengthPoints[0].x, lengthPoints[0].y);
+      ctx.strokeStyle = '#ff9500';
+      ctx.fillStyle = '#ff9500';
+      ctx.beginPath();
+      ctx.arc(p1.x, p1.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(previewMouseX, previewMouseY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(previewMouseX, previewMouseY, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
     dimensions.forEach(d => drawDimension(ctx, d));
   }
 

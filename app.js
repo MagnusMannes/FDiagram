@@ -274,6 +274,11 @@ if (bhaCanvas) {
   const previewCanvas = document.getElementById('previewCanvas');
   const previewCtx = previewCanvas ? previewCanvas.getContext('2d') : null;
 
+  const addLengthBtn = document.getElementById('addLengthBtn');
+  let lengthMode = false;
+  let lengthPoints = [];
+  const dimensions = [];
+
   function showPreview(comp) {
     if (!previewCanvas || !previewCtx) return;
     previewCanvas.hidden = false;
@@ -561,6 +566,62 @@ if (bhaCanvas) {
     return false;
   }
 
+  function localToCanvas(it, lx, ly) {
+    const b = getComponentBounds(it.comp);
+    if (it.flipped) {
+      lx = b.width - lx;
+      ly = b.height - ly;
+    }
+    return { x: it.x + lx * it.scale, y: it.y + ly * it.scale };
+  }
+
+  function drawDimension(ctx, dim, scale = 1) {
+    const p1 = localToCanvas(dim.p1.item, dim.p1.x, dim.p1.y);
+    const p2 = localToCanvas(dim.p2.item, dim.p2.x, dim.p2.y);
+    const x = (Math.max(p1.x, p2.x) + 20) * scale / 1; // offset 20 px
+    const y1 = p1.y * scale;
+    const y2 = p2.y * scale;
+    const top = Math.min(y1, y2);
+    const bottom = Math.max(y1, y2);
+    const len = Math.abs(bottom - top);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1 * scale;
+    ctx.beginPath();
+    ctx.moveTo(p1.x * scale, p1.y * scale);
+    ctx.lineTo(x, p1.y * scale);
+    ctx.moveTo(p2.x * scale, p2.y * scale);
+    ctx.lineTo(x, p2.y * scale);
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.stroke();
+
+    const a = 6 * scale;
+    ctx.beginPath();
+    ctx.moveTo(x - a, top + a);
+    ctx.lineTo(x, top);
+    ctx.lineTo(x + a, top + a);
+    ctx.moveTo(x - a, bottom - a);
+    ctx.lineTo(x, bottom);
+    ctx.lineTo(x + a, bottom - a);
+    ctx.stroke();
+
+    ctx.fillStyle = '#000';
+    ctx.font = (12 * scale) + 'px sans-serif';
+    if (len > 30 * scale) {
+      ctx.save();
+      ctx.translate(x - 8 * scale, (top + bottom) / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(len.toFixed(0), 0, 0);
+      ctx.restore();
+    } else {
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(len.toFixed(0), x + 4 * scale, (top + bottom) / 2);
+    }
+  }
+
   // get the Y coordinate (in local component space) of the connection surface
   // either at the top or bottom. If no connector is defined, fall back to the
   // extreme top/bottom of all parts.
@@ -644,6 +705,28 @@ if (bhaCanvas) {
     const rect = bhaCanvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    if (lengthMode && e.button === 0) {
+      let target = null;
+      for (let i = placed.length - 1; i >= 0; i--) {
+        if (hitTest(placed[i], x, y)) { target = placed[i]; break; }
+      }
+      if (target) {
+        const b = getComponentBounds(target.comp);
+        let lx = (x - target.x) / target.scale;
+        let ly = (y - target.y) / target.scale;
+        if (target.flipped) { lx = b.width - lx; ly = b.height - ly; }
+        lengthPoints.push({ item: target, x: lx, y: ly });
+        if (lengthPoints.length === 2) {
+          dimensions.push({ p1: lengthPoints[0], p2: lengthPoints[1] });
+          lengthMode = false;
+          lengthPoints = [];
+          if (addLengthBtn) addLengthBtn.textContent = 'Add lengths';
+          redraw();
+        }
+      }
+      return;
+    }
 
     if (e.button === 2) {
       for (let i = placed.length - 1; i >= 0; i--) {
@@ -1110,6 +1193,7 @@ if (bhaCanvas) {
         ctx.fill();
       }
     });
+    dimensions.forEach(d => drawDimension(ctx, d));
   }
 
   if (assyObj.items) {
@@ -1138,6 +1222,20 @@ if (bhaCanvas) {
     placed.forEach(p => { p.scale = Math.max(0.05, p.scale * (1 - SCALE_STEP)); });
     redraw();
   };
+
+  if (addLengthBtn) {
+    addLengthBtn.onclick = () => {
+      if (lengthMode) {
+        lengthMode = false;
+        lengthPoints = [];
+        addLengthBtn.textContent = 'Add lengths';
+      } else {
+        lengthMode = true;
+        lengthPoints = [];
+        addLengthBtn.textContent = 'Select points';
+      }
+    };
+  }
 
   function renderForPrint(ctx, scale) {
     const width = bhaCanvas.width * scale;
@@ -1175,6 +1273,7 @@ if (bhaCanvas) {
       drawComponent(ctx, item.comp, item.x, item.y, item.flipped, item.scale || 1);
       ctx.restore();
     });
+    dimensions.forEach(d => drawDimension(ctx, d, scale));
   }
 
   document.getElementById('printPdfBtn').onclick = () => {

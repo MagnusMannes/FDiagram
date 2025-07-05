@@ -10,6 +10,7 @@ button.primary{background:#007aff;color:#fff;}
 button.secondary{background:#e0e0e5;color:#1d1d1f;margin-left:1rem;}
 button.danger{background:#ff3b30;color:#fff;margin-left:1rem;}
 button.success{background:#28a745;color:#fff;margin-left:1rem;}
+button.length-btn{background:#ff9500;color:#fff;margin-left:1rem;}
 button:hover{filter:brightness(.95);}
 
 /*  ─── Layout Containers ───────────────────────────────── */
@@ -25,6 +26,7 @@ button:hover{filter:brightness(.95);}
 .view.builder .print-btn{position:absolute;bottom:4rem;left:1rem;}
 .view.builder .scale-down-btn{position:absolute;bottom:7rem;left:1rem;}
 .view.builder .scale-up-btn{position:absolute;bottom:10rem;left:1rem;}
+.view.builder .add-length-btn{position:absolute;bottom:13rem;left:1rem;}
 
 /* ─── Context Menu ─────────────────────────────────────── */
 .context-menu{position:absolute;display:none;background:#fff;border:1px solid #ccc;list-style:none;padding:0;margin:0;z-index:1000;}

@@ -663,7 +663,7 @@ if (bhaCanvas) {
     ctx.stroke();
 
     ctx.fillStyle = '#000';
-    ctx.font = (12 * scale) + 'px sans-serif';
+    ctx.font = (16 * scale) + 'px sans-serif';
     if (len > 30 * scale) {
       ctx.save();
       ctx.translate(x - 8 * scale, (top + bottom) / 2);
@@ -726,11 +726,14 @@ if (bhaCanvas) {
     ctx.lineTo(right - a, y + a);
     ctx.stroke();
     ctx.fillStyle = '#000';
-    ctx.font = (12 * scale) + 'px sans-serif';
-    ctx.textAlign = 'left';
+    ctx.font = (16 * scale) + 'px sans-serif';
+    ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    const val = dia.item.comp.od ? ('\u00F8' + dia.item.comp.od) : '\u00F8';
-    ctx.fillText(val, right + 4 * scale, y);
+    const widthVal = dia.item.comp.od ? formatInches(dia.item.comp.od) : '';
+    if (widthVal)
+      ctx.fillText(widthVal, left - 4 * scale, y);
+    ctx.textAlign = 'left';
+    ctx.fillText('\u00F8', right + 4 * scale, y);
   }
 
   function diameterHitTest(dia, x, y) {
@@ -1144,6 +1147,24 @@ if (bhaCanvas) {
     const ng = Math.round(g * (1 - p));
     const nb = Math.round(b * (1 - p));
     return rgbToHex(nr, ng, nb);
+  }
+
+  function formatInches(val) {
+    if (typeof val !== 'number') return '';
+    let whole = Math.floor(val);
+    let frac = val - whole;
+    const dens = [16, 8, 4, 2];
+    let num = 0, den = 1;
+    for (let d of dens) {
+      const n = Math.round(frac * d);
+      if (Math.abs(frac * d - n) < 0.01) { num = n; den = d; break; }
+    }
+    if (num === den) { whole++; num = 0; }
+    if (num === 0) return `${whole}\u2033`;
+    const gcd = (a,b)=>b?gcd(b,a%b):a;
+    const g = gcd(num, den);
+    num /= g; den /= g;
+    return `${whole} ${num}/${den}\u2033`;
   }
 
   function hasTopThread(comp) {

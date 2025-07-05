@@ -730,14 +730,14 @@ if (bhaCanvas) {
     const a = 6 * scale;
     ctx.beginPath();
     if (dia.style === 'singleLeft') {
-      const out = right + DIAMETER_OFFSET * scale;
-      ctx.moveTo(right, y);
-      ctx.lineTo(out, y);
+      const out = left - DIAMETER_OFFSET * scale;
+      ctx.moveTo(out, y);
+      ctx.lineTo(left, y);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(out - a, y - a);
-      ctx.lineTo(out, y);
-      ctx.lineTo(out - a, y + a);
+      ctx.moveTo(left - a, y - a);
+      ctx.lineTo(left, y);
+      ctx.lineTo(left - a, y + a);
       ctx.stroke();
     } else {
       ctx.moveTo(left, y);
@@ -754,11 +754,12 @@ if (bhaCanvas) {
     }
     ctx.fillStyle = '#000';
     ctx.font = (12 * scale) + 'px sans-serif';
-    const val = dia.item.comp.od ? ('\u00F8' + formatTwelfthInches(dia.item.comp.od)) : '\u00F8';
+    const rawVal = dia.item.comp.od !== undefined ? dia.item.comp.od : (b.width * dia.item.scale) / 12;
+    const val = '\u00F8' + formatTwelfthInches(rawVal);
     if (dia.style === 'singleLeft') {
-      ctx.textAlign = 'left';
+      ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
-      ctx.fillText(val, right + DIAMETER_OFFSET * scale + 4 * scale, y);
+      ctx.fillText(val, left - DIAMETER_OFFSET * scale - 4 * scale, y);
     } else {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
@@ -774,8 +775,8 @@ if (bhaCanvas) {
     let left = dia.item.x + b.minX * dia.item.scale - 6;
     let right = dia.item.x + b.maxX * dia.item.scale + 6;
     if (dia.style === 'singleLeft') {
-      left = right;
-      right += DIAMETER_OFFSET + 6;
+      right = left + 12; // padding around the line
+      left = dia.item.x + b.minX * dia.item.scale - DIAMETER_OFFSET - 6;
     }
     return Math.abs(y - lineY) <= 6 && x >= left && x <= right;
   }
@@ -1226,11 +1227,22 @@ if (bhaCanvas) {
 
   function formatTwelfthInches(val) {
     if (typeof val !== 'number' || isNaN(val)) return '';
+    const sign = val < 0 ? -1 : 1;
+    val = Math.abs(val);
     const whole = Math.floor(val);
     let frac = Math.round((val - whole) * 12);
-    if (frac === 12) { frac = 0; return (whole + 1) + '"'; }
-    if (frac === 0) return whole + '"';
-    return (whole ? whole + ' ' : '') + frac + '/12"';
+    if (frac === 12) { frac = 0; return (sign < 0 ? '-' : '') + (whole + 1) + '"'; }
+    if (frac === 0) return (sign < 0 ? '-' : '') + whole + '"';
+    const g = gcd(frac, 12);
+    frac /= g;
+    const denom = 12 / g;
+    const prefix = sign < 0 ? '-' : '';
+    return prefix + (whole ? whole + ' ' : '') + frac + '/' + denom + '"';
+  }
+
+  function gcd(a, b) {
+    while (b) { const t = a % b; a = b; b = t; }
+    return a;
   }
 
   function hasTopThread(comp) {

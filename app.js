@@ -275,12 +275,18 @@ if (bhaCanvas) {
   const previewCtx = previewCanvas ? previewCanvas.getContext('2d') : null;
 
   const addLengthBtn = document.getElementById('addLengthBtn');
+  const addDiameterBtn = document.getElementById('addDiameterBtn');
   let lengthMode = false;
   let lengthPoints = [];
   const dimensions = [];
+  const diameters = [];
   let dimensionDragTarget = null;
   let dimensionDragStartX = 0;
   let dimensionDragStartOffset = 0;
+  let diameterDragTarget = null;
+  let diameterDragStartY = 0;
+  let diameterDragStartOffset = 0;
+  let diameterMode = false;
   let previewMouseX = 0;
   let previewMouseY = 0;
 
@@ -445,8 +451,10 @@ if (bhaCanvas) {
   const contextMenu = document.getElementById('contextMenu');
   const modifyItem = document.getElementById('modifyItem');
   const removeLengthItem = document.getElementById('removeLengthItem');
+  const removeDiameterItem = document.getElementById('removeDiameterItem');
   let contextTarget = null;
   let dimensionContextTarget = null;
+  let diameterContextTarget = null;
   let rightDragItems = null;
   let rightDragPrevX = 0;
   let rightDragPrevY = 0;
@@ -458,6 +466,7 @@ if (bhaCanvas) {
     const {x, y} = getCanvasPos(e);
     contextTarget = null;
     dimensionContextTarget = null;
+    diameterContextTarget = null;
     for (let i = placed.length - 1; i >= 0; i--) {
       const it = placed[i];
       if (hitTest(it, x, y)) { contextTarget = it; break; }
@@ -466,11 +475,18 @@ if (bhaCanvas) {
       for (let i = 0; i < dimensions.length; i++) {
         if (dimensionHitTest(dimensions[i], x, y)) { dimensionContextTarget = i; break; }
       }
+      if (dimensionContextTarget === null) {
+        for (let i = 0; i < diameters.length; i++) {
+          if (diameterHitTest(diameters[i], x, y)) { diameterContextTarget = i; break; }
+        }
+      }
     }
-    if (contextTarget || dimensionContextTarget !== null) {
+    if (contextTarget || dimensionContextTarget !== null || diameterContextTarget !== null) {
       modifyItem.style.display = contextTarget ? 'block' : 'none';
       if (removeLengthItem)
         removeLengthItem.style.display = dimensionContextTarget !== null ? 'block' : 'none';
+      if (removeDiameterItem)
+        removeDiameterItem.style.display = diameterContextTarget !== null ? 'block' : 'none';
       const dzRect = dropZone.getBoundingClientRect();
       contextMenu.style.left = (e.clientX - dzRect.left) + 'px';
       contextMenu.style.top = (e.clientY - dzRect.top) + 'px';
@@ -512,6 +528,16 @@ if (bhaCanvas) {
       if (dimensionContextTarget === null) return;
       dimensions.splice(dimensionContextTarget, 1);
       dimensionContextTarget = null;
+      contextMenu.style.display = 'none';
+      redraw();
+    });
+  }
+
+  if (removeDiameterItem) {
+    removeDiameterItem.addEventListener('click', () => {
+      if (diameterContextTarget === null) return;
+      diameters.splice(diameterContextTarget, 1);
+      diameterContextTarget = null;
       contextMenu.style.display = 'none';
       redraw();
     });
@@ -677,6 +703,46 @@ if (bhaCanvas) {
     return false;
   }
 
+  function drawDiameter(ctx, dia, scale = 1) {
+    const b = getComponentBounds(dia.item.comp);
+    let ly = dia.y;
+    if (dia.item.flipped) ly = b.height - ly;
+    const y = (dia.item.y + (ly + (dia.offset || 0)) * dia.item.scale) * scale;
+    const left = (dia.item.x + b.minX * dia.item.scale) * scale;
+    const right = (dia.item.x + b.maxX * dia.item.scale) * scale;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1 * scale;
+    ctx.beginPath();
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
+    ctx.stroke();
+    const a = 6 * scale;
+    ctx.beginPath();
+    ctx.moveTo(left + a, y - a);
+    ctx.lineTo(left, y);
+    ctx.lineTo(left + a, y + a);
+    ctx.moveTo(right - a, y - a);
+    ctx.lineTo(right, y);
+    ctx.lineTo(right - a, y + a);
+    ctx.stroke();
+    ctx.fillStyle = '#000';
+    ctx.font = (12 * scale) + 'px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const val = dia.item.comp.od ? ('\u00F8' + dia.item.comp.od) : '\u00F8';
+    ctx.fillText(val, right + 4 * scale, y);
+  }
+
+  function diameterHitTest(dia, x, y) {
+    const b = getComponentBounds(dia.item.comp);
+    let ly = dia.y;
+    if (dia.item.flipped) ly = b.height - ly;
+    const lineY = dia.item.y + (ly + (dia.offset || 0)) * dia.item.scale;
+    const left = dia.item.x + b.minX * dia.item.scale - 6;
+    const right = dia.item.x + b.maxX * dia.item.scale + 6;
+    return Math.abs(y - lineY) <= 6 && x >= left && x <= right;
+  }
+
   // get the Y coordinate (in local component space) of the connection surface
   // either at the top or bottom. If no connector is defined, fall back to the
   // extreme top/bottom of all parts.
@@ -796,12 +862,37 @@ if (bhaCanvas) {
       return;
     }
 
-    if (!lengthMode && e.button === 0) {
+    if (diameterMode && e.button === 0) {
+      let target = null;
+      for (let i = placed.length - 1; i >= 0; i--) {
+        if (hitTest(placed[i], x, y)) { target = placed[i]; break; }
+      }
+      if (target) {
+        const b = getComponentBounds(target.comp);
+        let ly = (y - target.y) / target.scale;
+        if (target.flipped) ly = b.height - ly;
+        diameters.push({ item: target, y: ly, offset: 0 });
+        diameterMode = false;
+        if (addDiameterBtn) addDiameterBtn.textContent = 'Add diameter';
+        redraw();
+      }
+      return;
+    }
+
+    if (!lengthMode && !diameterMode && e.button === 0) {
       for (let i = dimensions.length - 1; i >= 0; i--) {
         if (dimensionHitTest(dimensions[i], x, y)) {
           dimensionDragTarget = dimensions[i];
           dimensionDragStartX = x;
           dimensionDragStartOffset = dimensionDragTarget.offset || 0;
+          return;
+        }
+      }
+      for (let i = diameters.length - 1; i >= 0; i--) {
+        if (diameterHitTest(diameters[i], x, y)) {
+          diameterDragTarget = diameters[i];
+          diameterDragStartY = y;
+          diameterDragStartOffset = diameterDragTarget.offset || 0;
           return;
         }
       }
@@ -875,6 +966,12 @@ if (bhaCanvas) {
       return;
     }
 
+    if (diameterDragTarget) {
+      diameterDragTarget.offset = diameterDragStartOffset + (y - diameterDragStartY);
+      redraw();
+      return;
+    }
+
     if (resizeObj) {
       const d = dist(x, y, resizeAnchor.x, resizeAnchor.y);
       if (resizeStartDist > 0) {
@@ -903,6 +1000,11 @@ if (bhaCanvas) {
     }
     if (dimensionDragTarget) {
       dimensionDragTarget = null;
+      redraw();
+      return;
+    }
+    if (diameterDragTarget) {
+      diameterDragTarget = null;
       redraw();
       return;
     }
@@ -1303,6 +1405,7 @@ if (bhaCanvas) {
       ctx.fill();
     }
     dimensions.forEach(d => drawDimension(ctx, d));
+    diameters.forEach(d => drawDiameter(ctx, d));
   }
 
   if (assyObj.items) {
@@ -1338,10 +1441,36 @@ if (bhaCanvas) {
         lengthMode = false;
         lengthPoints = [];
         addLengthBtn.textContent = 'Add lengths';
+        if (diameterMode && addDiameterBtn) {
+          diameterMode = false;
+          addDiameterBtn.textContent = 'Add diameter';
+        }
       } else {
+        diameterMode = false;
+        if (addDiameterBtn) addDiameterBtn.textContent = 'Add diameter';
         lengthMode = true;
         lengthPoints = [];
         addLengthBtn.textContent = 'Select points';
+      }
+    };
+  }
+
+  if (addDiameterBtn) {
+    addDiameterBtn.onclick = () => {
+      if (diameterMode) {
+        diameterMode = false;
+        addDiameterBtn.textContent = 'Add diameter';
+        if (lengthMode && addLengthBtn) {
+          lengthMode = false;
+          lengthPoints = [];
+          addLengthBtn.textContent = 'Add lengths';
+        }
+      } else {
+        lengthMode = false;
+        lengthPoints = [];
+        if (addLengthBtn) addLengthBtn.textContent = 'Add lengths';
+        diameterMode = true;
+        addDiameterBtn.textContent = 'Select point';
       }
     };
   }
@@ -1383,6 +1512,7 @@ if (bhaCanvas) {
       ctx.restore();
     });
     dimensions.forEach(d => drawDimension(ctx, d, scale));
+    diameters.forEach(d => drawDiameter(ctx, d, scale));
   }
 
   document.getElementById('printPdfBtn').onclick = () => {

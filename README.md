@@ -13,3 +13,9 @@ On the builder page use the **Scale Up** and **Scale Down** buttons to adjust
 the size of every component on the canvas. Each click changes the component
 scale by 10%. Newly dropped components now use the current scale so they match
 the rest of the assembly.
+
+## Dragging
+
+Click anywhere within a component's body to drag it around the canvas. Each
+part's bounding box is now treated as a draggable area, so hollow regions are
+also easily clickable.

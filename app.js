@@ -278,6 +278,8 @@ if (bhaCanvas) {
   let lengthMode = false;
   let lengthPoints = [];
   const dimensions = [];
+  let dragDim = null;
+  let dimDragPrevX = 0;
 
   function showPreview(comp) {
     if (!previewCanvas || !previewCtx) return;
@@ -578,7 +580,8 @@ if (bhaCanvas) {
   function drawDimension(ctx, dim, scale = 1) {
     const p1 = localToCanvas(dim.p1.item, dim.p1.x, dim.p1.y);
     const p2 = localToCanvas(dim.p2.item, dim.p2.x, dim.p2.y);
-    const x = (Math.max(p1.x, p2.x) + 20) * scale / 1; // offset 20 px
+    const offset = typeof dim.offset === 'number' ? dim.offset : 20;
+    const x = (Math.max(p1.x, p2.x) + offset) * scale; // offset to the right
     const y1 = p1.y * scale;
     const y2 = p2.y * scale;
     const top = Math.min(y1, y2);
@@ -607,19 +610,31 @@ if (bhaCanvas) {
 
     ctx.fillStyle = '#000';
     ctx.font = (12 * scale) + 'px sans-serif';
+    const cm = len * 2.54 / 96; // convert px to cm
+    const label = cm.toFixed(1) + ' cm';
     if (len > 30 * scale) {
       ctx.save();
       ctx.translate(x - 8 * scale, (top + bottom) / 2);
       ctx.rotate(-Math.PI / 2);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(len.toFixed(0), 0, 0);
+      ctx.fillText(label, 0, 0);
       ctx.restore();
     } else {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(len.toFixed(0), x + 4 * scale, (top + bottom) / 2);
+      ctx.fillText(label, x + 4 * scale, (top + bottom) / 2);
     }
+  }
+
+  function dimLineHit(dim, x, y) {
+    const p1 = localToCanvas(dim.p1.item, dim.p1.x, dim.p1.y);
+    const p2 = localToCanvas(dim.p2.item, dim.p2.x, dim.p2.y);
+    const offset = typeof dim.offset === 'number' ? dim.offset : 20;
+    const lineX = Math.max(p1.x, p2.x) + offset;
+    const top = Math.min(p1.y, p2.y);
+    const bottom = Math.max(p1.y, p2.y);
+    return Math.abs(x - lineX) <= 5 && y >= top - 5 && y <= bottom + 5;
   }
 
   // get the Y coordinate (in local component space) of the connection surface
@@ -716,9 +731,13 @@ if (bhaCanvas) {
         let lx = (x - target.x) / target.scale;
         let ly = (y - target.y) / target.scale;
         if (target.flipped) { lx = b.width - lx; ly = b.height - ly; }
+        const bottomY = target.y + b.maxY * target.scale;
+        if (Math.abs(y - bottomY) <= 10) {
+          ly = b.maxY;
+        }
         lengthPoints.push({ item: target, x: lx, y: ly });
         if (lengthPoints.length === 2) {
-          dimensions.push({ p1: lengthPoints[0], p2: lengthPoints[1] });
+          dimensions.push({ p1: lengthPoints[0], p2: lengthPoints[1], offset: 20 });
           lengthMode = false;
           lengthPoints = [];
           if (addLengthBtn) addLengthBtn.textContent = 'Add lengths';
@@ -726,6 +745,16 @@ if (bhaCanvas) {
         }
       }
       return;
+    }
+
+    if (!lengthMode && e.button === 0) {
+      for (let i = dimensions.length - 1; i >= 0; i--) {
+        if (dimLineHit(dimensions[i], x, y)) {
+          dragDim = dimensions[i];
+          dimDragPrevX = x;
+          return;
+        }
+      }
     }
 
     if (e.button === 2) {
@@ -786,6 +815,14 @@ if (bhaCanvas) {
       return;
     }
 
+    if (dragDim) {
+      const dx = x - dimDragPrevX;
+      dragDim.offset += dx;
+      dimDragPrevX = x;
+      redraw();
+      return;
+    }
+
     if (resizeObj) {
       const d = dist(x, y, resizeAnchor.x, resizeAnchor.y);
       if (resizeStartDist > 0) {
@@ -805,6 +842,10 @@ if (bhaCanvas) {
     if (rightDragItems) {
       rightDragItems = null;
       rightDragging = false;
+      return;
+    }
+    if (dragDim) {
+      dragDim = null;
       return;
     }
     if (resizeObj) {

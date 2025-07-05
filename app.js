@@ -537,6 +537,18 @@ if (bhaCanvas) {
     const bottom = it.y + b.maxY * scale;
     if (x >= left && x <= right && y >= top && y <= bottom) return true;
 
+    // Check bounding box of each part so hollow sections are still clickable
+    for (const p of it.comp.parts) {
+      const px = it.flipped ? b.width - p.x - p.width : p.x;
+      const py = it.flipped ? b.height - p.y - p.height : p.y;
+      const partLeft = it.x + px * scale;
+      const partRight = partLeft + p.width * scale;
+      const partTop = it.y + py * scale;
+      const partBottom = partTop + p.height * scale;
+      if (x >= partLeft && x <= partRight && y >= partTop && y <= partBottom)
+        return true;
+    }
+
     // Fall back to polygon hit test if needed
     for (const p of it.comp.parts) {
       const pts = partPolygonPoints(p, 0, 0).map(pt => {

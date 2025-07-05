@@ -452,6 +452,7 @@ if (bhaCanvas) {
   const modifyItem = document.getElementById('modifyItem');
   const removeLengthItem = document.getElementById('removeLengthItem');
   const removeDiameterItem = document.getElementById('removeDiameterItem');
+  const toggleDiameterTypeItem = document.getElementById('toggleDiameterTypeItem');
   let contextTarget = null;
   let dimensionContextTarget = null;
   let diameterContextTarget = null;
@@ -487,6 +488,8 @@ if (bhaCanvas) {
         removeLengthItem.style.display = dimensionContextTarget !== null ? 'block' : 'none';
       if (removeDiameterItem)
         removeDiameterItem.style.display = diameterContextTarget !== null ? 'block' : 'none';
+      if (toggleDiameterTypeItem)
+        toggleDiameterTypeItem.style.display = diameterContextTarget !== null ? 'block' : 'none';
       const dzRect = dropZone.getBoundingClientRect();
       contextMenu.style.left = (e.clientX - dzRect.left) + 'px';
       contextMenu.style.top = (e.clientY - dzRect.top) + 'px';
@@ -538,6 +541,16 @@ if (bhaCanvas) {
       if (diameterContextTarget === null) return;
       diameters.splice(diameterContextTarget, 1);
       diameterContextTarget = null;
+      contextMenu.style.display = 'none';
+      redraw();
+    });
+  }
+
+  if (toggleDiameterTypeItem) {
+    toggleDiameterTypeItem.addEventListener('click', () => {
+      if (diameterContextTarget === null) return;
+      const dia = diameters[diameterContextTarget];
+      dia.style = dia.style === 'singleLeft' ? 'double' : 'singleLeft';
       contextMenu.style.display = 'none';
       redraw();
     });
@@ -718,19 +731,31 @@ if (bhaCanvas) {
     ctx.stroke();
     const a = 6 * scale;
     ctx.beginPath();
-    ctx.moveTo(left + a, y - a);
-    ctx.lineTo(left, y);
-    ctx.lineTo(left + a, y + a);
-    ctx.moveTo(right - a, y - a);
-    ctx.lineTo(right, y);
-    ctx.lineTo(right - a, y + a);
+    if (dia.style === 'singleLeft') {
+      ctx.moveTo(right - a, y - a);
+      ctx.lineTo(right, y);
+      ctx.lineTo(right - a, y + a);
+    } else {
+      ctx.moveTo(left + a, y - a);
+      ctx.lineTo(left, y);
+      ctx.lineTo(left + a, y + a);
+      ctx.moveTo(right - a, y - a);
+      ctx.lineTo(right, y);
+      ctx.lineTo(right - a, y + a);
+    }
     ctx.stroke();
     ctx.fillStyle = '#000';
     ctx.font = (12 * scale) + 'px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    const val = dia.item.comp.od ? ('\u00F8' + dia.item.comp.od) : '\u00F8';
-    ctx.fillText(val, right + 4 * scale, y);
+    const val = dia.item.comp.od ? ('\u00F8' + formatTwelfthInches(dia.item.comp.od)) : '\u00F8';
+    if (dia.style === 'singleLeft') {
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(val, left, y - 4 * scale);
+    } else {
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(val, right + 4 * scale, y);
+    }
   }
 
   function diameterHitTest(dia, x, y) {
@@ -871,7 +896,7 @@ if (bhaCanvas) {
         const b = getComponentBounds(target.comp);
         let ly = (y - target.y) / target.scale;
         if (target.flipped) ly = b.height - ly;
-        diameters.push({ item: target, y: ly, offset: 0 });
+        diameters.push({ item: target, y: ly, offset: 0, style: 'double' });
         diameterMode = false;
         if (addDiameterBtn) addDiameterBtn.textContent = 'Add diameter';
         redraw();
@@ -938,6 +963,24 @@ if (bhaCanvas) {
       }
     }
     redraw();
+  });
+
+  bhaCanvas.addEventListener('dblclick', e => {
+    const {x, y} = getCanvasPos(e);
+    for (let i = diameters.length - 1; i >= 0; i--) {
+      if (diameterHitTest(diameters[i], x, y)) {
+        const cur = diameters[i].item.comp.od || '';
+        const input = prompt('Enter diameter in inches:', cur);
+        if (input !== null) {
+          const v = parseInches(input);
+          if (!isNaN(v)) {
+            diameters[i].item.comp.od = v;
+            redraw();
+          }
+        }
+        break;
+      }
+    }
   });
 
   window.addEventListener('mousemove', e => {
@@ -1144,6 +1187,24 @@ if (bhaCanvas) {
     const ng = Math.round(g * (1 - p));
     const nb = Math.round(b * (1 - p));
     return rgbToHex(nr, ng, nb);
+  }
+
+  function parseInches(str) {
+    str = (str || '').trim();
+    let m = str.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+    if (m) return parseInt(m[1]) + parseInt(m[2]) / parseInt(m[3]);
+    m = str.match(/^(\d+)\/(\d+)$/);
+    if (m) return parseInt(m[1]) / parseInt(m[2]);
+    return parseFloat(str);
+  }
+
+  function formatTwelfthInches(val) {
+    if (typeof val !== 'number' || isNaN(val)) return '';
+    const whole = Math.floor(val);
+    let frac = Math.round((val - whole) * 12);
+    if (frac === 12) { frac = 0; return (whole + 1) + '"'; }
+    if (frac === 0) return whole + '"';
+    return (whole ? whole + ' ' : '') + frac + '/12"';
   }
 
   function hasTopThread(comp) {

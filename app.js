@@ -726,32 +726,39 @@ if (bhaCanvas) {
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 1 * scale;
     ctx.beginPath();
-    ctx.moveTo(left, y);
-    ctx.lineTo(right, y);
-    ctx.stroke();
-    const a = 6 * scale;
-    ctx.beginPath();
     if (dia.style === 'singleLeft') {
-      ctx.moveTo(right - a, y - a);
+      const start = right + 20 * scale;
+      ctx.moveTo(start, y);
       ctx.lineTo(right, y);
-      ctx.lineTo(right - a, y + a);
+      ctx.stroke();
+      const a = 6 * scale;
+      ctx.beginPath();
+      ctx.moveTo(right + a, y - a);
+      ctx.lineTo(right, y);
+      ctx.lineTo(right + a, y + a);
+      ctx.stroke();
+      ctx.fillStyle = '#000';
+      ctx.font = (12 * scale) + 'px sans-serif';
+      const val = dia.item.comp.od ? ('\u00F8' + formatTwelfthInches(dia.item.comp.od)) : '\u00F8';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(val, start - 4 * scale, y - 4 * scale);
     } else {
+      ctx.moveTo(left, y);
+      ctx.lineTo(right, y);
+      ctx.stroke();
+      const a = 6 * scale;
+      ctx.beginPath();
       ctx.moveTo(left + a, y - a);
       ctx.lineTo(left, y);
       ctx.lineTo(left + a, y + a);
       ctx.moveTo(right - a, y - a);
       ctx.lineTo(right, y);
       ctx.lineTo(right - a, y + a);
-    }
-    ctx.stroke();
-    ctx.fillStyle = '#000';
-    ctx.font = (12 * scale) + 'px sans-serif';
-    const val = dia.item.comp.od ? ('\u00F8' + formatTwelfthInches(dia.item.comp.od)) : '\u00F8';
-    if (dia.style === 'singleLeft') {
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(val, left, y - 4 * scale);
-    } else {
+      ctx.stroke();
+      ctx.fillStyle = '#000';
+      ctx.font = (12 * scale) + 'px sans-serif';
+      const val = dia.item.comp.od ? ('\u00F8' + formatTwelfthInches(dia.item.comp.od)) : '\u00F8';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillText(val, right + 4 * scale, y);
@@ -765,6 +772,10 @@ if (bhaCanvas) {
     const lineY = dia.item.y + (ly + (dia.offset || 0)) * dia.item.scale;
     const left = dia.item.x + b.minX * dia.item.scale - 6;
     const right = dia.item.x + b.maxX * dia.item.scale + 6;
+    if (dia.style === 'singleLeft') {
+      const start = dia.item.x + b.maxX * dia.item.scale + 20;
+      return Math.abs(y - lineY) <= 6 && x >= right - 6 && x <= start;
+    }
     return Math.abs(y - lineY) <= 6 && x >= left && x <= right;
   }
 

@@ -529,6 +529,15 @@ if (bhaCanvas) {
   function hitTest(it, x, y) {
     const b = getComponentBounds(it.comp);
     const scale = it.scale;
+
+    // Bounding box check first to make the entire component clickable
+    const left = it.x + b.minX * scale;
+    const right = it.x + b.maxX * scale;
+    const top = it.y + b.minY * scale;
+    const bottom = it.y + b.maxY * scale;
+    if (x >= left && x <= right && y >= top && y <= bottom) return true;
+
+    // Fall back to polygon hit test if needed
     for (const p of it.comp.parts) {
       const pts = partPolygonPoints(p, 0, 0).map(pt => {
         let px = it.flipped ? b.width - pt.x : pt.x;

@@ -278,6 +278,9 @@ if (bhaCanvas) {
   let lengthMode = false;
   let lengthPoints = [];
   const dimensions = [];
+  let dimensionDragTarget = null;
+  let dimensionDragStartX = 0;
+  let dimensionDragStartOffset = 0;
   let previewMouseX = 0;
   let previewMouseY = 0;
 
@@ -605,7 +608,8 @@ if (bhaCanvas) {
   function drawDimension(ctx, dim, scale = 1) {
     const p1 = localToCanvas(dim.p1.item, dim.p1.x, dim.p1.y);
     const p2 = localToCanvas(dim.p2.item, dim.p2.x, dim.p2.y);
-    const x = (Math.max(p1.x, p2.x) + 20) * scale / 1; // offset 20 px
+    const baseX = Math.max(p1.x, p2.x) + 20;
+    const x = (baseX + (dim.offset || 0)) * scale;
     const y1 = p1.y * scale;
     const y2 = p2.y * scale;
     const top = Math.min(y1, y2);
@@ -652,7 +656,7 @@ if (bhaCanvas) {
   function dimensionHitTest(dim, x, y) {
     const p1 = localToCanvas(dim.p1.item, dim.p1.x, dim.p1.y);
     const p2 = localToCanvas(dim.p2.item, dim.p2.x, dim.p2.y);
-    const lineX = Math.max(p1.x, p2.x) + 20;
+    const lineX = Math.max(p1.x, p2.x) + 20 + (dim.offset || 0);
     const top = Math.min(p1.y, p2.y);
     const bottom = Math.max(p1.y, p2.y);
     const near = 6;
@@ -769,7 +773,20 @@ if (bhaCanvas) {
         if (target.flipped) { lx = b.width - lx; ly = b.height - ly; }
         lengthPoints.push({ item: target, x: lx, y: ly });
         if (lengthPoints.length === 2) {
-          dimensions.push({ p1: lengthPoints[0], p2: lengthPoints[1] });
+          const newDim = { p1: lengthPoints[0], p2: lengthPoints[1], offset: 0 };
+          const cp1 = localToCanvas(newDim.p1.item, newDim.p1.x, newDim.p1.y);
+          const cp2 = localToCanvas(newDim.p2.item, newDim.p2.x, newDim.p2.y);
+          const baseX = Math.max(cp1.x, cp2.x) + 20;
+          let off = 0;
+          const SP = 15;
+          while (dimensions.some(d => {
+            const op1 = localToCanvas(d.p1.item, d.p1.x, d.p1.y);
+            const op2 = localToCanvas(d.p2.item, d.p2.x, d.p2.y);
+            const ox = Math.max(op1.x, op2.x) + 20 + (d.offset || 0);
+            return Math.abs(ox - (baseX + off)) < 8;
+          })) off += SP;
+          newDim.offset = off;
+          dimensions.push(newDim);
           lengthMode = false;
           lengthPoints = [];
           if (addLengthBtn) addLengthBtn.textContent = 'Add lengths';
@@ -777,6 +794,17 @@ if (bhaCanvas) {
         }
       }
       return;
+    }
+
+    if (!lengthMode && e.button === 0) {
+      for (let i = dimensions.length - 1; i >= 0; i--) {
+        if (dimensionHitTest(dimensions[i], x, y)) {
+          dimensionDragTarget = dimensions[i];
+          dimensionDragStartX = x;
+          dimensionDragStartOffset = dimensionDragTarget.offset || 0;
+          return;
+        }
+      }
     }
 
     if (e.button === 2) {
@@ -841,6 +869,12 @@ if (bhaCanvas) {
       return;
     }
 
+    if (dimensionDragTarget) {
+      dimensionDragTarget.offset = dimensionDragStartOffset + (x - dimensionDragStartX);
+      redraw();
+      return;
+    }
+
     if (resizeObj) {
       const d = dist(x, y, resizeAnchor.x, resizeAnchor.y);
       if (resizeStartDist > 0) {
@@ -864,6 +898,11 @@ if (bhaCanvas) {
     }
     if (resizeObj) {
       resizeObj = null;
+      redraw();
+      return;
+    }
+    if (dimensionDragTarget) {
+      dimensionDragTarget = null;
       redraw();
       return;
     }

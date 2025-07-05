@@ -280,6 +280,7 @@ if (bhaCanvas) {
   let lengthPoints = [];
   const dimensions = [];
   const diameters = [];
+  const DIAMETER_OFFSET = 20;
   let dimensionDragTarget = null;
   let dimensionDragStartX = 0;
   let dimensionDragStartOffset = 0;
@@ -654,6 +655,7 @@ if (bhaCanvas) {
     const top = Math.min(y1, y2);
     const bottom = Math.max(y1, y2);
     const len = Math.abs(bottom - top);
+    const label = dim.label !== null && dim.label !== undefined ? dim.label : len.toFixed(0);
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 1 * scale;
     ctx.beginPath();
@@ -683,12 +685,12 @@ if (bhaCanvas) {
       ctx.rotate(-Math.PI / 2);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(len.toFixed(0), 0, 0);
+      ctx.fillText(label, 0, 0);
       ctx.restore();
     } else {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(len.toFixed(0), x + 4 * scale, (top + bottom) / 2);
+      ctx.fillText(label, x + 4 * scale, (top + bottom) / 2);
     }
   }
 
@@ -725,32 +727,38 @@ if (bhaCanvas) {
     const right = (dia.item.x + b.maxX * dia.item.scale) * scale;
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 1 * scale;
-    ctx.beginPath();
-    ctx.moveTo(left, y);
-    ctx.lineTo(right, y);
-    ctx.stroke();
     const a = 6 * scale;
     ctx.beginPath();
     if (dia.style === 'singleLeft') {
-      ctx.moveTo(right - a, y - a);
-      ctx.lineTo(right, y);
-      ctx.lineTo(right - a, y + a);
+      const out = right + DIAMETER_OFFSET * scale;
+      ctx.moveTo(right, y);
+      ctx.lineTo(out, y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(out - a, y - a);
+      ctx.lineTo(out, y);
+      ctx.lineTo(out - a, y + a);
+      ctx.stroke();
     } else {
+      ctx.moveTo(left, y);
+      ctx.lineTo(right, y);
+      ctx.stroke();
+      ctx.beginPath();
       ctx.moveTo(left + a, y - a);
       ctx.lineTo(left, y);
       ctx.lineTo(left + a, y + a);
       ctx.moveTo(right - a, y - a);
       ctx.lineTo(right, y);
       ctx.lineTo(right - a, y + a);
+      ctx.stroke();
     }
-    ctx.stroke();
     ctx.fillStyle = '#000';
     ctx.font = (12 * scale) + 'px sans-serif';
     const val = dia.item.comp.od ? ('\u00F8' + formatTwelfthInches(dia.item.comp.od)) : '\u00F8';
     if (dia.style === 'singleLeft') {
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(val, left, y - 4 * scale);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(val, right + DIAMETER_OFFSET * scale + 4 * scale, y);
     } else {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
@@ -763,8 +771,12 @@ if (bhaCanvas) {
     let ly = dia.y;
     if (dia.item.flipped) ly = b.height - ly;
     const lineY = dia.item.y + (ly + (dia.offset || 0)) * dia.item.scale;
-    const left = dia.item.x + b.minX * dia.item.scale - 6;
-    const right = dia.item.x + b.maxX * dia.item.scale + 6;
+    let left = dia.item.x + b.minX * dia.item.scale - 6;
+    let right = dia.item.x + b.maxX * dia.item.scale + 6;
+    if (dia.style === 'singleLeft') {
+      left = right;
+      right += DIAMETER_OFFSET + 6;
+    }
     return Math.abs(y - lineY) <= 6 && x >= left && x <= right;
   }
 
@@ -864,7 +876,7 @@ if (bhaCanvas) {
         if (target.flipped) { lx = b.width - lx; ly = b.height - ly; }
         lengthPoints.push({ item: target, x: lx, y: ly });
         if (lengthPoints.length === 2) {
-          const newDim = { p1: lengthPoints[0], p2: lengthPoints[1], offset: 0 };
+        const newDim = { p1: lengthPoints[0], p2: lengthPoints[1], offset: 0, label: null };
           const cp1 = localToCanvas(newDim.p1.item, newDim.p1.x, newDim.p1.y);
           const cp2 = localToCanvas(newDim.p2.item, newDim.p2.x, newDim.p2.y);
           const baseX = Math.max(cp1.x, cp2.x) + 20;
@@ -977,6 +989,20 @@ if (bhaCanvas) {
             diameters[i].item.comp.od = v;
             redraw();
           }
+        }
+        break;
+      }
+    }
+    for (let i = dimensions.length - 1; i >= 0; i--) {
+      if (dimensionHitTest(dimensions[i], x, y)) {
+        const p1 = localToCanvas(dimensions[i].p1.item, dimensions[i].p1.x, dimensions[i].p1.y);
+        const p2 = localToCanvas(dimensions[i].p2.item, dimensions[i].p2.x, dimensions[i].p2.y);
+        const len = Math.abs(p2.y - p1.y);
+        const cur = dimensions[i].label || len.toFixed(0);
+        const input = prompt('Enter length label:', cur);
+        if (input !== null) {
+          dimensions[i].label = input.trim();
+          redraw();
         }
         break;
       }

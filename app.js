@@ -281,6 +281,16 @@ if (bhaCanvas) {
   let previewMouseX = 0;
   let previewMouseY = 0;
 
+  function canvasCoords(evt) {
+    const rect = bhaCanvas.getBoundingClientRect();
+    const scaleX = bhaCanvas.width / rect.width;
+    const scaleY = bhaCanvas.height / rect.height;
+    return {
+      x: (evt.clientX - rect.left) * scaleX,
+      y: (evt.clientY - rect.top) * scaleY
+    };
+  }
+
   function showPreview(comp) {
     if (!previewCanvas || !previewCtx) return;
     previewCanvas.hidden = false;
@@ -414,10 +424,11 @@ if (bhaCanvas) {
     const json = ev.dataTransfer.getData('application/json');
     if (!json) return;
     const comp = normalizeComponent(JSON.parse(json));
+    const {x, y} = canvasCoords(ev);
     placed.push({
       comp,
-      x: ev.offsetX,
-      y: ev.offsetY,
+      x,
+      y,
       flipped: false,
       scale: Math.max(0.05, DEFAULT_SCALE * builderScale),
       attachedTo: null,
@@ -443,9 +454,7 @@ if (bhaCanvas) {
   bhaCanvas.addEventListener('contextmenu', e => {
     e.preventDefault();
     if (rightDragging) { rightDragging = false; return; }
-    const rect = bhaCanvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const {x, y} = canvasCoords(e);
     contextTarget = null;
     dimensionContextTarget = null;
     for (let i = placed.length - 1; i >= 0; i--) {
@@ -746,9 +755,7 @@ if (bhaCanvas) {
   }
 
   bhaCanvas.addEventListener('mousedown', e => {
-    const rect = bhaCanvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const {x, y} = canvasCoords(e);
     previewMouseX = x;
     previewMouseY = y;
 
@@ -817,9 +824,7 @@ if (bhaCanvas) {
   });
 
   window.addEventListener('mousemove', e => {
-    const rect = bhaCanvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const {x, y} = canvasCoords(e);
 
     previewMouseX = x;
     previewMouseY = y;

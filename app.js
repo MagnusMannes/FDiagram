@@ -281,6 +281,7 @@ if (bhaCanvas) {
   const dimensions = [];
   const diameters = [];
   const DIAMETER_OFFSET = 20;
+  const PRINT_TEXT_SCALE = 1.2;
   let dimensionDragTarget = null;
   let dimensionDragStartX = 0;
   let dimensionDragStartOffset = 0;
@@ -645,7 +646,7 @@ if (bhaCanvas) {
     return { x: it.x + lx * it.scale, y: it.y + ly * it.scale };
   }
 
-  function drawDimension(ctx, dim, scale = 1) {
+  function drawDimension(ctx, dim, scale = 1, textScale = 1) {
     const p1 = localToCanvas(dim.p1.item, dim.p1.x, dim.p1.y);
     const p2 = localToCanvas(dim.p2.item, dim.p2.x, dim.p2.y);
     const baseX = Math.max(p1.x, p2.x) + 20;
@@ -678,7 +679,7 @@ if (bhaCanvas) {
     ctx.stroke();
 
     ctx.fillStyle = '#000';
-    ctx.font = (12 * scale) + 'px sans-serif';
+    ctx.font = (12 * scale * textScale) + 'px sans-serif';
     if (len > 30 * scale) {
       ctx.save();
       ctx.translate(x - 8 * scale, (top + bottom) / 2);
@@ -715,10 +716,27 @@ if (bhaCanvas) {
     if (Math.abs(x - lineX) <= near && y >= top - near && y <= bottom + near) return true;
     if (distToSeg(x, y, p1.x, p1.y, lineX, p1.y) <= near) return true;
     if (distToSeg(x, y, p2.x, p2.y, lineX, p2.y) <= near) return true;
+
+    const len = Math.abs(p2.y - p1.y);
+    const label = dim.label !== null && dim.label !== undefined ? dim.label : len.toFixed(0);
+    ctx.font = '12px sans-serif';
+    const textWidth = ctx.measureText(label).width;
+    const textHeight = 12;
+    if (len > 30) {
+      const cx = lineX - 8;
+      const cy = (top + bottom) / 2;
+      if (Math.abs(x - cx) <= textHeight / 2 + 2 && Math.abs(y - cy) <= textWidth / 2 + 2) return true;
+    } else {
+      const tx1 = lineX + 4;
+      const ty1 = (top + bottom) / 2 - textHeight / 2 - 2;
+      const tx2 = tx1 + textWidth + 4;
+      const ty2 = ty1 + textHeight + 4;
+      if (x >= tx1 && x <= tx2 && y >= ty1 && y <= ty2) return true;
+    }
     return false;
   }
 
-  function drawDiameter(ctx, dia, scale = 1) {
+  function drawDiameter(ctx, dia, scale = 1, textScale = 1) {
     const b = getComponentBounds(dia.item.comp);
     let ly = dia.y;
     if (dia.item.flipped) ly = b.height - ly;
@@ -753,7 +771,7 @@ if (bhaCanvas) {
       ctx.stroke();
     }
     ctx.fillStyle = '#000';
-    ctx.font = (12 * scale) + 'px sans-serif';
+    ctx.font = (12 * scale * textScale) + 'px sans-serif';
     const rawVal = dia.item.comp.od !== undefined ? dia.item.comp.od : (b.width * dia.item.scale) / 12;
     const val = '\u00F8' + formatTwelfthInches(rawVal);
     if (dia.style === 'singleLeft') {
@@ -778,7 +796,27 @@ if (bhaCanvas) {
       right = left + 12; // padding around the line
       left = dia.item.x + b.minX * dia.item.scale - DIAMETER_OFFSET - 6;
     }
-    return Math.abs(y - lineY) <= 6 && x >= left && x <= right;
+    if (Math.abs(y - lineY) <= 6 && x >= left && x <= right) return true;
+
+    const rawVal = dia.item.comp.od !== undefined ? dia.item.comp.od : (b.width * dia.item.scale) / 12;
+    const val = '\u00F8' + formatTwelfthInches(rawVal);
+    ctx.font = '12px sans-serif';
+    const textWidth = ctx.measureText(val).width;
+    const textHeight = 12;
+    if (dia.style === 'singleLeft') {
+      const tx2 = dia.item.x + b.minX * dia.item.scale - DIAMETER_OFFSET - 4;
+      const tx1 = tx2 - textWidth - 4;
+      const ty1 = lineY - textHeight / 2 - 2;
+      const ty2 = lineY + textHeight / 2 + 2;
+      if (x >= tx1 && x <= tx2 && y >= ty1 && y <= ty2) return true;
+    } else {
+      const tx1 = dia.item.x + b.maxX * dia.item.scale + 4;
+      const tx2 = tx1 + textWidth + 4;
+      const ty1 = lineY - textHeight / 2 - 2;
+      const ty2 = lineY + textHeight / 2 + 2;
+      if (x >= tx1 && x <= tx2 && y >= ty1 && y <= ty2) return true;
+    }
+    return false;
   }
 
   // get the Y coordinate (in local component space) of the connection surface
@@ -1598,7 +1636,7 @@ if (bhaCanvas) {
     ctx.lineTo(x + titleCol, y + smallRow);
     ctx.stroke();
 
-    ctx.font = (12 * scale) + 'px sans-serif';
+    ctx.font = (12 * scale * PRINT_TEXT_SCALE) + 'px sans-serif';
     ctx.fillStyle = '#000';
     ctx.fillText('Title:', x + 4 * scale, y + 14 * scale);
     ctx.fillText(assyObj.name, x + titleCol + 4 * scale, y + 14 * scale);
@@ -1610,8 +1648,8 @@ if (bhaCanvas) {
       drawComponent(ctx, item.comp, item.x, item.y, item.flipped, item.scale || 1);
       ctx.restore();
     });
-    dimensions.forEach(d => drawDimension(ctx, d, scale));
-    diameters.forEach(d => drawDiameter(ctx, d, scale));
+    dimensions.forEach(d => drawDimension(ctx, d, scale, PRINT_TEXT_SCALE));
+    diameters.forEach(d => drawDiameter(ctx, d, scale, PRINT_TEXT_SCALE));
   }
 
   document.getElementById('printPdfBtn').onclick = () => {

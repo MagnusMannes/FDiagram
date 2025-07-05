@@ -527,7 +527,7 @@ if (bhaCanvas) {
   }
 
   function hitTest(it, x, y) {
-    const b = getComponentBounds(it.comp);
+    const b = getComponentBodyBounds(it.comp);
     const scale = it.scale;
 
     // Bounding box check first to make the entire component clickable
@@ -1056,6 +1056,38 @@ if (bhaCanvas) {
     if (minX === Infinity) { minX = minY = 0; maxX = maxY = 0; }
     comp._bounds = {minX, minY, maxX, maxY, width:maxX-minX, height:maxY-minY};
     return comp._bounds;
+  }
+
+  function getComponentBodyBounds(comp) {
+    if (comp._bodyBounds) return comp._bodyBounds;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    comp.parts.forEach(p => {
+      partPolygonPoints(p, 0, 0).forEach(pt => {
+        minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
+        maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
+      });
+    });
+    (comp.drawnShapes || []).forEach(s => {
+      if (s.type === 'line') {
+        minX = Math.min(minX, s.x1, s.x2);
+        maxX = Math.max(maxX, s.x1, s.x2);
+        minY = Math.min(minY, s.y1, s.y2);
+        maxY = Math.max(maxY, s.y1, s.y2);
+      } else if (s.type === 'circle') {
+        minX = Math.min(minX, s.cx - s.r);
+        maxX = Math.max(maxX, s.cx + s.r);
+        minY = Math.min(minY, s.cy - s.r);
+        maxY = Math.max(maxY, s.cy + s.r);
+      } else if (s.type === 'curve') {
+        [s.p0, s.p1, s.p2].forEach(pt => {
+          minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+          minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y);
+        });
+      }
+    });
+    if (minX === Infinity) { minX = minY = 0; maxX = maxY = 0; }
+    comp._bodyBounds = {minX, minY, maxX, maxY, width:maxX-minX, height:maxY-minY};
+    return comp._bodyBounds;
   }
 
   function drawFrame() {

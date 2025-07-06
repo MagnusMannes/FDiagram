@@ -364,15 +364,15 @@ if (bhaCanvas) {
   });
 
   const FIELD_DEFS = [
-    { id: 'shankOD', label: 'Shank OD' },
-    { id: 'totalLength', label: 'Total length' },
+    { id: 'totalLength', label: 'Total L' },
     { id: 'maxOD', label: 'Max OD' },
-    { id: 'fishNeckLength', label: 'Fish neck length' },
-    { id: 'fishNeckOD', label: 'Fish neck OD' },
     { id: 'minID', label: 'Minimum ID' },
-    { id: 'date', label: 'Date', getDefault: () => new Date().toISOString().split('T')[0] },
+    { id: 'fishNeckLength', label: 'Fish neck L' },
+    { id: 'fishNeckOD', label: 'Fish neck OD' },
+    { id: 'weight', label: 'Weight' },
     { id: 'basket', label: 'Basket' },
-    { id: 'comments', label: 'Comments', double: true }
+    { id: 'date', label: 'Date', getDefault: () => new Date().toISOString().split('T')[0] },
+    { id: 'comments', label: 'Comment', double: true }
   ];
   const fields = assyObj.fields || {};
   FIELD_DEFS.forEach(def => {
@@ -1686,9 +1686,9 @@ if (bhaCanvas) {
     fieldRects.length = 0;
     const active = FIELD_DEFS.filter(d => fields[d.id] && fields[d.id].enabled);
     if (!active.length) return;
-    const tbW = 270;
+    const tbW = 320;
     const smallRow = 20;
-    const titleCol = 50;
+    const titleCol = 100;
     const rowCount = active.reduce((a, d) => a + (d.double ? 2 : 1), 0);
     const tbH = smallRow * rowCount;
     const x = bhaCanvas.width - margin - tbW;
@@ -1891,9 +1891,9 @@ if (bhaCanvas) {
 
     const active = FIELD_DEFS.filter(d => fields[d.id] && fields[d.id].enabled);
     if (active.length) {
-      const tbW = 270 * scale;
+      const tbW = 320 * scale;
       const smallRow = 20 * scale;
-      const titleCol = 50 * scale;
+      const titleCol = 100 * scale;
       const rowCount = active.reduce((a, d) => a + (d.double ? 2 : 1), 0);
       const tbH = smallRow * rowCount;
       const x = width - margin - tbW;

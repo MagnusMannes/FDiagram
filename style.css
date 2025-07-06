@@ -48,6 +48,7 @@ button:hover{filter:brightness(.95);}
 
 /*  ─── Drop Zone (Assembly Stack) ──────────────────────── */
 .dropzone{flex:1;height:100%;padding:1rem;background:#e9f5ff;display:flex;flex-direction:column;align-items:center;overflow:auto;position:relative;}
+.field-list{position:absolute;right:1rem;bottom:1rem;background:#fff;border:1px solid #dcdce0;padding:.5rem;}
 .field-list label{display:block;margin-bottom:.3rem;}
 
 .assy-input{width:100%;margin-bottom:1rem;padding:.4rem;font-size:1.1rem;}

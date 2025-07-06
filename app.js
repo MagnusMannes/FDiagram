@@ -285,6 +285,8 @@ if (bhaCanvas) {
   let dimensionDragTarget = null;
   let dimensionDragStartX = 0;
   let dimensionDragStartOffset = 0;
+  let dimensionPointDragTarget = null;
+  let dimensionPointDragStartY = 0;
   let diameterDragTarget = null;
   let diameterDragStartY = 0;
   let diameterDragStartOffset = 0;
@@ -731,9 +733,30 @@ if (bhaCanvas) {
       const ty1 = (top + bottom) / 2 - textHeight / 2 - 2;
       const tx2 = tx1 + textWidth + 4;
       const ty2 = ty1 + textHeight + 4;
-      if (x >= tx1 && x <= tx2 && y >= ty1 && y <= ty2) return true;
+    if (x >= tx1 && x <= tx2 && y >= ty1 && y <= ty2) return true;
     }
     return false;
+  }
+
+  function dimensionEndpointHitTest(dim, x, y) {
+    const p1 = localToCanvas(dim.p1.item, dim.p1.x, dim.p1.y);
+    const p2 = localToCanvas(dim.p2.item, dim.p2.x, dim.p2.y);
+    const lineX = Math.max(p1.x, p2.x) + 20 + (dim.offset || 0);
+    const near = 6;
+    function distToSeg(px, py, x1, y1, x2, y2) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const lenSq = dx * dx + dy * dy;
+      let t = 0;
+      if (lenSq > 0) t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+      const lx = x1 + t * dx;
+      const ly = y1 + t * dy;
+      return Math.hypot(px - lx, py - ly);
+    }
+    if (distToSeg(x, y, p1.x, p1.y, lineX, p1.y) <= near) return 'p1';
+    if (distToSeg(x, y, p2.x, p2.y, lineX, p2.y) <= near) return 'p2';
+    return null;
   }
 
   function drawDiameter(ctx, dia, scale = 1, textScale = 1) {
@@ -943,6 +966,12 @@ if (bhaCanvas) {
 
     if (!lengthMode && !diameterMode && e.button === 0) {
       for (let i = dimensions.length - 1; i >= 0; i--) {
+        const anchor = dimensionEndpointHitTest(dimensions[i], x, y);
+        if (anchor) {
+          dimensionPointDragTarget = { dim: dimensions[i], anchor };
+          dimensionPointDragStartY = y;
+          return;
+        }
         if (dimensionHitTest(dimensions[i], x, y)) {
           dimensionDragTarget = dimensions[i];
           dimensionDragStartX = x;
@@ -1054,6 +1083,17 @@ if (bhaCanvas) {
       return;
     }
 
+    if (dimensionPointDragTarget) {
+      const tgt = dimensionPointDragTarget;
+      const item = tgt.dim[tgt.anchor].item;
+      const b = getComponentBounds(item.comp);
+      let ly = (y - item.y) / item.scale;
+      if (item.flipped) ly = b.height - ly;
+      tgt.dim[tgt.anchor].y = ly;
+      redraw();
+      return;
+    }
+
     if (dimensionDragTarget) {
       dimensionDragTarget.offset = dimensionDragStartOffset + (x - dimensionDragStartX);
       redraw();
@@ -1089,6 +1129,11 @@ if (bhaCanvas) {
     }
     if (resizeObj) {
       resizeObj = null;
+      redraw();
+      return;
+    }
+    if (dimensionPointDragTarget) {
+      dimensionPointDragTarget = null;
       redraw();
       return;
     }

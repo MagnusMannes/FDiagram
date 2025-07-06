@@ -151,12 +151,11 @@ function storeSession() {
 // ───── Main page ─────
 const newBtn = document.getElementById('newBtn');
 if (newBtn) {
-  newBtn.onclick = async () => {
+  newBtn.onclick = () => {
     const name = prompt('Enter name for new BHA');
     if (!name) return;
     currentBha = { name: name.trim(), assemblies: [] };
     saveCurrentBha();
-    await backupFile();
     storeSession();
     location.href = 'assembly.html';
   };
@@ -241,10 +240,16 @@ function renderLoadList() {
     delBtn.textContent = 'Delete';
     delBtn.onclick = () => { deleteBha(info.name); renderLoadList(); };
 
+    const exportBtn = document.createElement('button');
+    exportBtn.className = 'export-btn';
+    exportBtn.textContent = 'Export';
+    exportBtn.onclick = () => exportBha(info.name);
+
     row.appendChild(loadBtn);
     row.appendChild(created);
     row.appendChild(updated);
     row.appendChild(delBtn);
+    row.appendChild(exportBtn);
     loadList.appendChild(row);
   });
 }
@@ -2262,6 +2267,35 @@ function deleteBha(name) {
     currentBha = { name: '', assemblies: [] };
     currentAssemblyIdx = 0;
   }
+}
+
+async function exportBha(name) {
+  const item = localStorage.getItem('bha-' + name);
+  if (!item) { alert('BHA not found'); return; }
+  let obj;
+  try { obj = JSON.parse(item); }
+  catch { alert('Failed to export'); return; }
+  const data = { name: obj.name, assemblies: obj.assemblies };
+  const json = JSON.stringify(data, null, 2);
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: obj.name + '.json',
+        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      return;
+    } catch {}
+  }
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = obj.name + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 async function backupFile() {

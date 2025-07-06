@@ -107,17 +107,30 @@ fetch('fdrawingv1/threads.json')
 
 loadSession();
 
+function normalizeAssembly(a, idx) {
+  if (Array.isArray(a)) {
+    return { name: 'Assembly ' + (idx + 1), items: a, texts: [], dimensions: [], diameters: [], fields: {} };
+  }
+  if (a && typeof a === 'object') {
+    return {
+      name: a.name || 'Assembly ' + (idx + 1),
+      items: Array.isArray(a.items) ? a.items : [],
+      texts: Array.isArray(a.texts) ? a.texts : [],
+      dimensions: Array.isArray(a.dimensions) ? a.dimensions : [],
+      diameters: Array.isArray(a.diameters) ? a.diameters : [],
+      fields: a.fields || {}
+    };
+  }
+  return { name: 'Assembly ' + (idx + 1), items: [], texts: [], dimensions: [], diameters: [], fields: {} };
+}
+
 function loadSession() {
   try {
     const obj = JSON.parse(localStorage.getItem('currentBha') || '{}');
     currentBha = { name: obj.name || '', assemblies: [] };
     if (Array.isArray(obj.assemblies)) {
       obj.assemblies.forEach((a, i) => {
-        if (Array.isArray(a)) {
-          currentBha.assemblies.push({ name: 'Assembly ' + (i + 1), items: a });
-        } else if (a && Array.isArray(a.items)) {
-          currentBha.assemblies.push({ name: a.name || 'Assembly ' + (i + 1), items: a.items });
-        }
+        currentBha.assemblies.push(normalizeAssembly(a, i));
       });
     }
     currentAssemblyIdx = parseInt(localStorage.getItem('currentAssemblyIdx') || '0', 10);
@@ -166,11 +179,7 @@ if (fileInput) {
                     (Array.isArray(data.assembly) ? [data.assembly] :
                     (Array.isArray(data) ? data : []));
         arr.forEach((a, i) => {
-          if (Array.isArray(a)) {
-            currentBha.assemblies.push({ name: 'Assembly ' + (i + 1), items: a });
-          } else if (a && Array.isArray(a.items)) {
-            currentBha.assemblies.push({ name: a.name || 'Assembly ' + (i + 1), items: a.items });
-          }
+          currentBha.assemblies.push(normalizeAssembly(a, i));
         });
         saveCurrentBha();
         storeSession();
@@ -204,10 +213,12 @@ function renderLoadList() {
       if (!item) { alert('BHA not found'); return; }
       try {
         const obj = JSON.parse(item);
-        currentBha = {
-          name: obj.name,
-          assemblies: obj.assemblies || [obj.assembly || []]
-        };
+        currentBha = { name: obj.name, assemblies: [] };
+        const arr = Array.isArray(obj.assemblies) ? obj.assemblies :
+                    (obj.assembly ? [obj.assembly] : []);
+        arr.forEach((a, i) => {
+          currentBha.assemblies.push(normalizeAssembly(a, i));
+        });
         saveCurrentBha();
         storeSession();
         location.href = 'assembly.html';
@@ -241,7 +252,14 @@ if (assemblyList) {
   renderAssemblyList();
   document.getElementById('addAssyBtn').onclick = () => {
     const num = currentBha.assemblies.length + 1;
-    currentBha.assemblies.push({ name: 'Assembly ' + num, items: [] });
+    currentBha.assemblies.push({
+      name: 'Assembly ' + num,
+      items: [],
+      texts: [],
+      dimensions: [],
+      diameters: [],
+      fields: {}
+    });
     currentAssemblyIdx = currentBha.assemblies.length - 1;
     saveCurrentBha();
     storeSession();
@@ -331,7 +349,14 @@ if (bhaCanvas) {
   }
 
   const nameInput = document.getElementById('assyTitle');
-  const assyObj = currentBha.assemblies[currentAssemblyIdx] || { name: 'Assembly ' + (currentAssemblyIdx + 1), items: [] };
+  const assyObj = currentBha.assemblies[currentAssemblyIdx] || {
+    name: 'Assembly ' + (currentAssemblyIdx + 1),
+    items: [],
+    texts: [],
+    dimensions: [],
+    diameters: [],
+    fields: {}
+  };
   nameInput.value = assyObj.name;
   nameInput.addEventListener('input', () => {
     assyObj.name = nameInput.value.trim() || 'Assembly ' + (currentAssemblyIdx + 1);

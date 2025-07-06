@@ -280,6 +280,9 @@ if (bhaCanvas) {
   let lengthPoints = [];
   const dimensions = [];
   const diameters = [];
+  const addTextBtn = document.getElementById('addTextBtn');
+  let textMode = false;
+  const textBoxes = [];
   const DIAMETER_OFFSET = 20;
   const PRINT_TEXT_SCALE = 1.2;
   let dimensionDragTarget = null;
@@ -290,6 +293,9 @@ if (bhaCanvas) {
   let diameterDragTarget = null;
   let diameterDragStartY = 0;
   let diameterDragStartOffset = 0;
+  let textDragTarget = null;
+  let textDragOffX = 0;
+  let textDragOffY = 0;
   let diameterMode = false;
   let previewMouseX = 0;
   let previewMouseY = 0;
@@ -457,9 +463,11 @@ if (bhaCanvas) {
   const removeLengthItem = document.getElementById('removeLengthItem');
   const removeDiameterItem = document.getElementById('removeDiameterItem');
   const toggleDiameterTypeItem = document.getElementById('toggleDiameterTypeItem');
+  const deleteTextItem = document.getElementById('deleteTextItem');
   let contextTarget = null;
   let dimensionContextTarget = null;
   let diameterContextTarget = null;
+  let textContextTarget = null;
   let rightDragItems = null;
   let rightDragPrevX = 0;
   let rightDragPrevY = 0;
@@ -472,6 +480,7 @@ if (bhaCanvas) {
     contextTarget = null;
     dimensionContextTarget = null;
     diameterContextTarget = null;
+    textContextTarget = null;
     for (let i = placed.length - 1; i >= 0; i--) {
       const it = placed[i];
       if (hitTest(it, x, y)) { contextTarget = it; break; }
@@ -484,9 +493,14 @@ if (bhaCanvas) {
         for (let i = 0; i < diameters.length; i++) {
           if (diameterHitTest(diameters[i], x, y)) { diameterContextTarget = i; break; }
         }
+        if (diameterContextTarget === null) {
+          for (let i = 0; i < textBoxes.length; i++) {
+            if (textHitTest(textBoxes[i], x, y)) { textContextTarget = i; break; }
+          }
+        }
       }
     }
-    if (contextTarget || dimensionContextTarget !== null || diameterContextTarget !== null) {
+    if (contextTarget || dimensionContextTarget !== null || diameterContextTarget !== null || textContextTarget !== null) {
       modifyItem.style.display = contextTarget ? 'block' : 'none';
       if (removeLengthItem)
         removeLengthItem.style.display = dimensionContextTarget !== null ? 'block' : 'none';
@@ -494,6 +508,8 @@ if (bhaCanvas) {
         removeDiameterItem.style.display = diameterContextTarget !== null ? 'block' : 'none';
       if (toggleDiameterTypeItem)
         toggleDiameterTypeItem.style.display = diameterContextTarget !== null ? 'block' : 'none';
+      if (deleteTextItem)
+        deleteTextItem.style.display = textContextTarget !== null ? 'block' : 'none';
       const dzRect = dropZone.getBoundingClientRect();
       contextMenu.style.left = (e.clientX - dzRect.left) + 'px';
       contextMenu.style.top = (e.clientY - dzRect.top) + 'px';
@@ -555,6 +571,16 @@ if (bhaCanvas) {
       if (diameterContextTarget === null) return;
       const dia = diameters[diameterContextTarget];
       dia.style = dia.style === 'singleLeft' ? 'double' : 'singleLeft';
+      contextMenu.style.display = 'none';
+      redraw();
+    });
+  }
+
+  if (deleteTextItem) {
+    deleteTextItem.addEventListener('click', () => {
+      if (textContextTarget === null) return;
+      textBoxes.splice(textContextTarget, 1);
+      textContextTarget = null;
       contextMenu.style.display = 'none';
       redraw();
     });
@@ -828,6 +854,20 @@ if (bhaCanvas) {
     return false;
   }
 
+  function drawTextBox(ctx, tb, scale = 1, textScale = 1) {
+    ctx.fillStyle = '#000';
+    ctx.font = (16 * scale * textScale) + 'px sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.fillText(tb.text, tb.x * scale, tb.y * scale);
+  }
+
+  function textHitTest(tb, x, y) {
+    ctx.font = '16px sans-serif';
+    const w = ctx.measureText(tb.text).width;
+    const h = 16;
+    return x >= tb.x && x <= tb.x + w && y >= tb.y && y <= tb.y + h;
+  }
+
   // get the Y coordinate (in local component space) of the connection surface
   // either at the top or bottom. If no connector is defined, fall back to the
   // extreme top/bottom of all parts.
@@ -912,6 +952,17 @@ if (bhaCanvas) {
     previewMouseX = x;
     previewMouseY = y;
 
+    if (textMode && e.button === 0) {
+      const t = prompt('Enter text:', 'Text');
+      if (t !== null) {
+        textBoxes.push({ text: t.trim() || 'Text', x, y });
+        redraw();
+      }
+      textMode = false;
+      if (addTextBtn) addTextBtn.textContent = 'Add text';
+      return;
+    }
+
     if (lengthMode && e.button === 0) {
       let target = null;
       for (let i = placed.length - 1; i >= 0; i--) {
@@ -965,6 +1016,14 @@ if (bhaCanvas) {
     }
 
     if (!lengthMode && !diameterMode && e.button === 0) {
+      for (let i = textBoxes.length - 1; i >= 0; i--) {
+        if (textHitTest(textBoxes[i], x, y)) {
+          textDragTarget = textBoxes[i];
+          textDragOffX = x - textBoxes[i].x;
+          textDragOffY = y - textBoxes[i].y;
+          return;
+        }
+      }
       for (let i = dimensions.length - 1; i >= 0; i--) {
         const anchor = dimensionEndpointHitTest(dimensions[i], x, y);
         if (anchor) {
@@ -1033,6 +1092,17 @@ if (bhaCanvas) {
 
   bhaCanvas.addEventListener('dblclick', e => {
     const {x, y} = getCanvasPos(e);
+    for (let i = textBoxes.length - 1; i >= 0; i--) {
+      if (textHitTest(textBoxes[i], x, y)) {
+        const cur = textBoxes[i].text;
+        const input = prompt('Edit text:', cur);
+        if (input !== null) {
+          textBoxes[i].text = input.trim();
+          redraw();
+        }
+        return;
+      }
+    }
     for (let i = diameters.length - 1; i >= 0; i--) {
       if (diameterHitTest(diameters[i], x, y)) {
         const cur = diameters[i].item.comp.od || '';
@@ -1068,6 +1138,12 @@ if (bhaCanvas) {
 
     previewMouseX = x;
     previewMouseY = y;
+    if (textDragTarget) {
+      textDragTarget.x = x - textDragOffX;
+      textDragTarget.y = y - textDragOffY;
+      redraw();
+      return;
+    }
     if (lengthMode && lengthPoints.length === 1 && !dragObj && !resizeObj && !rightDragItems) {
       redraw();
     }
@@ -1122,6 +1198,11 @@ if (bhaCanvas) {
   });
 
   window.addEventListener('mouseup', () => {
+    if (textDragTarget) {
+      textDragTarget = null;
+      redraw();
+      return;
+    }
     if (rightDragItems) {
       rightDragItems = null;
       rightDragging = false;
@@ -1574,6 +1655,7 @@ if (bhaCanvas) {
     }
     dimensions.forEach(d => drawDimension(ctx, d));
     diameters.forEach(d => drawDiameter(ctx, d));
+    textBoxes.forEach(t => drawTextBox(ctx, t));
   }
 
   if (assyObj.items) {
@@ -1588,6 +1670,11 @@ if (bhaCanvas) {
     }));
     if (placed.length)
       builderScale = placed[0].scale / DEFAULT_SCALE;
+  }
+  if (Array.isArray(assyObj.texts)) {
+    assyObj.texts.forEach(t => {
+      textBoxes.push({ text: t.text || '', x: t.x || 0, y: t.y || 0 });
+    });
   }
   redraw();
 
@@ -1643,6 +1730,20 @@ if (bhaCanvas) {
     };
   }
 
+  if (addTextBtn) {
+    addTextBtn.onclick = () => {
+      if (textMode) {
+        textMode = false;
+        addTextBtn.textContent = 'Add text';
+      } else {
+        textMode = true;
+        if (addLengthBtn) { lengthMode = false; lengthPoints = []; addLengthBtn.textContent = 'Add lengths'; }
+        if (addDiameterBtn) { diameterMode = false; addDiameterBtn.textContent = 'Add diameter'; }
+        addTextBtn.textContent = 'Click location';
+      }
+    };
+  }
+
   function renderForPrint(ctx, scale) {
     const width = bhaCanvas.width * scale;
     const height = bhaCanvas.height * scale;
@@ -1681,6 +1782,7 @@ if (bhaCanvas) {
     });
     dimensions.forEach(d => drawDimension(ctx, d, scale, PRINT_TEXT_SCALE));
     diameters.forEach(d => drawDiameter(ctx, d, scale, PRINT_TEXT_SCALE));
+    textBoxes.forEach(t => drawTextBox(ctx, t, scale, PRINT_TEXT_SCALE));
   }
 
   document.getElementById('printPdfBtn').onclick = () => {
@@ -1720,6 +1822,7 @@ if (bhaCanvas) {
 
   document.getElementById('backAssyBtn').onclick = () => {
     assyObj.items = placed;
+    assyObj.texts = textBoxes;
     saveCurrentBha();
     storeSession();
     // Replace the builder page in history so returning from assemblies

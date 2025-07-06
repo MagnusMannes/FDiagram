@@ -16,21 +16,20 @@
       <h2>Private Components</h2>
       <input type="file" id="privateInput" accept="application/json" multiple />
       <div id="privateList"></div>
-      <h2>Fields</h2>
-      <div id="fieldList" class="field-list">
-        <label><input type="checkbox" data-field="shankOD"> Shank OD</label><br>
-        <label><input type="checkbox" data-field="totalLength"> Total length</label><br>
-        <label><input type="checkbox" data-field="maxOD"> Max OD</label><br>
-        <label><input type="checkbox" data-field="fishNeckLength"> Fish neck length</label><br>
-        <label><input type="checkbox" data-field="fishNeckOD"> Fish neck OD</label><br>
-        <label><input type="checkbox" data-field="minID"> Minimum ID</label><br>
-        <label><input type="checkbox" data-field="date"> Date</label><br>
-        <label><input type="checkbox" data-field="basket"> Basket</label><br>
-        <label><input type="checkbox" data-field="comments"> Comments</label>
-      </div>
     </aside>
     <main id="dropZone" class="dropzone">
       <canvas id="bhaCanvas" width="794" height="1123"></canvas>
+      <div id="fieldList" class="field-list">
+        <label><input type="checkbox" data-field="totalLength"> Total L</label><br>
+        <label><input type="checkbox" data-field="maxOD"> Max OD</label><br>
+        <label><input type="checkbox" data-field="minID"> Minimum ID</label><br>
+        <label><input type="checkbox" data-field="fishNeckLength"> Fish neck L</label><br>
+        <label><input type="checkbox" data-field="fishNeckOD"> Fish neck OD</label><br>
+        <label><input type="checkbox" data-field="weight"> Weight</label><br>
+        <label><input type="checkbox" data-field="basket"> Basket</label><br>
+        <label><input type="checkbox" data-field="date"> Date</label><br>
+        <label><input type="checkbox" data-field="comments"> Comment</label>
+      </div>
       <canvas id="previewCanvas" width="200" height="200" class="preview-canvas" hidden></canvas>
       <button id="addLengthBtn" class="length-btn add-length-btn">Add lengths</button>
       <button id="addDiameterBtn" class="length-btn add-diameter-btn">Add diameter</button>

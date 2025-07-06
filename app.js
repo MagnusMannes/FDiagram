@@ -1738,6 +1738,15 @@ if (bhaCanvas) {
     }));
     if (placed.length)
       builderScale = placed[0].scale / DEFAULT_SCALE;
+    assyObj.items.forEach((it, i) => {
+      if (typeof it.parentIndex === 'number') {
+        const parent = placed[it.parentIndex];
+        if (parent) {
+          placed[i].attachedTo = parent;
+          parent.attachedChildren.push(placed[i]);
+        }
+      }
+    });
   }
   if (Array.isArray(assyObj.texts)) {
     assyObj.texts.forEach(t => {
@@ -1940,10 +1949,15 @@ if (bhaCanvas) {
       x: p.x,
       y: p.y,
       flipped: !!p.flipped,
-      scale: typeof p.scale === 'number' ? p.scale : 1
+      scale: typeof p.scale === 'number' ? p.scale : 1,
+      parentIndex: null
     }));
     const idxMap = new Map();
     cleanItems.forEach((_, i) => idxMap.set(placed[i], i));
+    cleanItems.forEach((it, i) => {
+      const parent = placed[i].attachedTo;
+      if (parent && idxMap.has(parent)) it.parentIndex = idxMap.get(parent);
+    });
 
     assyObj.items = cleanItems;
     assyObj.texts = textBoxes.map(t => ({ text: t.text, x: t.x, y: t.y }));

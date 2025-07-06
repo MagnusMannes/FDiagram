@@ -109,7 +109,7 @@ loadSession();
 
 function normalizeAssembly(a, idx) {
   if (Array.isArray(a)) {
-    return { name: 'Assembly ' + (idx + 1), items: a, texts: [], dimensions: [], diameters: [], fields: {} };
+    return { name: 'Assembly ' + (idx + 1), items: a, texts: [], dimensions: [], diameters: [], fields: {}, pdfImage: null };
   }
   if (a && typeof a === 'object') {
     return {
@@ -118,10 +118,11 @@ function normalizeAssembly(a, idx) {
       texts: Array.isArray(a.texts) ? a.texts : [],
       dimensions: Array.isArray(a.dimensions) ? a.dimensions : [],
       diameters: Array.isArray(a.diameters) ? a.diameters : [],
-      fields: a.fields || {}
+      fields: a.fields || {},
+      pdfImage: typeof a.pdfImage === 'string' ? a.pdfImage : null
     };
   }
-  return { name: 'Assembly ' + (idx + 1), items: [], texts: [], dimensions: [], diameters: [], fields: {} };
+  return { name: 'Assembly ' + (idx + 1), items: [], texts: [], dimensions: [], diameters: [], fields: {}, pdfImage: null };
 }
 
 function loadSession() {
@@ -338,13 +339,54 @@ if (assemblyList) {
       texts: [],
       dimensions: [],
       diameters: [],
-      fields: {}
+      fields: {},
+      pdfImage: null
     });
     currentAssemblyIdx = currentBha.assemblies.length - 1;
     saveCurrentBha();
     storeSession();
     location.href = 'builder.html';
   };
+
+  const uploadBtn = document.getElementById('uploadPdfBtn');
+  const uploadInput = document.getElementById('extPdfInput');
+  if (uploadBtn && uploadInput) {
+    uploadBtn.onclick = () => uploadInput.click();
+    uploadInput.onchange = async () => {
+      const file = uploadInput.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      try {
+        const pdf = await pdfjsLib.getDocument(url).promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 2 });
+        const c = document.createElement('canvas');
+        c.width = viewport.width;
+        c.height = viewport.height;
+        await page.render({ canvasContext: c.getContext('2d'), viewport }).promise;
+        const imgData = c.toDataURL('image/png');
+        const num = currentBha.assemblies.length + 1;
+        currentBha.assemblies.push({
+          name: file.name.replace(/\.pdf$/i, '') || 'Assembly ' + num,
+          items: [],
+          texts: [],
+          dimensions: [],
+          diameters: [],
+          fields: {},
+          pdfImage: imgData
+        });
+        currentAssemblyIdx = currentBha.assemblies.length - 1;
+        saveCurrentBha();
+        storeSession();
+        location.href = 'builder.html';
+      } catch (err) {
+        alert('Failed to load PDF');
+      } finally {
+        URL.revokeObjectURL(url);
+        uploadInput.value = '';
+      }
+    };
+  }
   document.getElementById('backMainBtn').onclick = () => {
     storeSession();
     if (history.length > 1) history.back();
@@ -363,6 +405,7 @@ if (bhaCanvas) {
   const SCALE_STEP = 0.1;
   let builderScale = 1;
   const FDRAWER_URL = 'https://magnusmannes.github.io/FDrawer/';
+  let pdfImg = null;
   let selectedItem = null;
   let resizeObj = null;
   let resizeAnchor = null;
@@ -435,8 +478,14 @@ if (bhaCanvas) {
     texts: [],
     dimensions: [],
     diameters: [],
-    fields: {}
+    fields: {},
+    pdfImage: null
   };
+  if (assyObj.pdfImage) {
+    pdfImg = new Image();
+    pdfImg.src = assyObj.pdfImage;
+    pdfImg.onload = redraw;
+  }
   nameInput.value = assyObj.name;
   nameInput.addEventListener('input', () => {
     assyObj.name = nameInput.value.trim() || 'Assembly ' + (currentAssemblyIdx + 1);
@@ -1758,6 +1807,9 @@ if (bhaCanvas) {
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, bhaCanvas.width, bhaCanvas.height);
     ctx.strokeRect(margin, margin, bhaCanvas.width - margin * 2, bhaCanvas.height - margin * 2);
+    if (pdfImg && pdfImg.complete) {
+      ctx.drawImage(pdfImg, margin, margin, bhaCanvas.width - margin * 2, bhaCanvas.height - margin * 2);
+    }
 
     ctx.font = '24px sans-serif';
     ctx.fillStyle = '#000';
@@ -2576,6 +2628,16 @@ function renderAssembly(ctx, assy, scale) {
   ctx.clearRect(0, 0, width, height);
   ctx.strokeRect(0, 0, width, height);
   ctx.strokeRect(margin, margin, width - margin * 2, height - margin * 2);
+  if (assy.pdfImage) {
+    if (!assy._pdfImg) {
+      const img = new Image();
+      img.src = assy.pdfImage;
+      assy._pdfImg = img;
+    }
+    if (assy._pdfImg.complete) {
+      ctx.drawImage(assy._pdfImg, margin, margin, width - margin * 2, height - margin * 2);
+    }
+  }
 
   ctx.font = (24 * scale) + 'px sans-serif';
   ctx.fillStyle = '#000';

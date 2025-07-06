@@ -11,6 +11,8 @@
     <h1 id="bhaTitle">BHA</h1>
     <div id="assemblyList" class="list"></div>
     <button id="addAssyBtn" class="primary">New Assembly</button>
+    <input id="extPdfInput" type="file" accept="application/pdf" hidden>
+    <button id="uploadPdfBtn" class="upload-btn">Upload external drawing</button>
     <button id="printAllBtn" class="success">Print all</button>
     <button id="backMainBtn" class="secondary back-btn">Back</button>
     <canvas id="assemblyPreview" width="210" height="297" class="assy-preview" hidden></canvas>
@@ -19,6 +21,8 @@
       <li data-action="down" class="context-menu-item">Move down</li>
     </ul>
   </section>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';</script>
   <script src="app.js"></script>
 </body>
 </html>

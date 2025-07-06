@@ -1810,6 +1810,8 @@ if (bhaCanvas) {
   }
 
   function drawFrame() {
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
     const margin = 20;
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
@@ -2051,6 +2053,8 @@ if (bhaCanvas) {
     const width = bhaCanvas.width * scale;
     const height = bhaCanvas.height * scale;
     const margin = 20 * scale;
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
     ctx.lineWidth = 2 * scale;
     ctx.strokeStyle = '#000';
     ctx.clearRect(0, 0, width, height);
@@ -2667,6 +2671,8 @@ function renderAssembly(ctx, assy, scale) {
   const width = 794 * scale;
   const height = 1123 * scale;
   const margin = 20 * scale;
+  ctx.textAlign = 'start';
+  ctx.textBaseline = 'alphabetic';
   ctx.lineWidth = 2 * scale;
   ctx.strokeStyle = '#000';
   ctx.clearRect(0, 0, width, height);

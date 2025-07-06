@@ -64,8 +64,10 @@ button:hover{filter:brightness(.95);}
 
 /*  ─── Load Page Table ───────────────────────────────── */
 .load-list{width:100%;max-width:600px;}
-.load-row{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:.5rem;margin-bottom:.5rem;}
+.load-row{display:grid;grid-template-columns:1fr auto auto auto auto;align-items:center;gap:.5rem;margin-bottom:.5rem;}
 .load-row button{margin:0;}
+
+button.export-btn{background:#ff9500;color:#fff;margin-left:1rem;}
 
 /*  ─── Canvas ─────────────────────────────────────────── */
 #bhaCanvas{background:#fff;border:1px solid #dcdce0;margin-bottom:1rem;height:100%;aspect-ratio:210/297;width:auto;max-height:calc(100vh - 6rem);}

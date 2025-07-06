@@ -11,6 +11,7 @@ button.secondary{background:#e0e0e5;color:#1d1d1f;margin-left:1rem;}
 button.danger{background:#ff3b30;color:#fff;margin-left:1rem;}
 button.success{background:#28a745;color:#fff;margin-left:1rem;}
 button.length-btn{background:#ff9500;color:#fff;margin-left:1rem;}
+button.upload-btn{background:#ff9500;color:#fff;margin-left:1rem;}
 button:hover{filter:brightness(.95);}
 
 /*  ─── Layout Containers ───────────────────────────────── */

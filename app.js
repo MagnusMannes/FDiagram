@@ -250,6 +250,86 @@ function renderLoadList() {
 const assemblyList = document.getElementById('assemblyList');
 if (assemblyList) {
   renderAssemblyList();
+  const previewCanvas = document.getElementById('assemblyPreview');
+  const previewCtx = previewCanvas ? previewCanvas.getContext('2d') : null;
+  const contextMenu = document.getElementById('assyContextMenu');
+  const moveUpItem = contextMenu ? contextMenu.querySelector('[data-action="up"]') : null;
+  const moveDownItem = contextMenu ? contextMenu.querySelector('[data-action="down"]') : null;
+  let contextIndex = -1;
+
+  function hideContextMenu() { if (contextMenu) contextMenu.style.display = 'none'; }
+
+  assemblyList.addEventListener('contextmenu', e => {
+    const row = e.target.closest('.assy-row');
+    if (!row) return;
+    e.preventDefault();
+    contextIndex = parseInt(row.dataset.index, 10);
+    if (contextMenu) {
+      contextMenu.style.left = e.pageX + 'px';
+      contextMenu.style.top = e.pageY + 'px';
+      contextMenu.style.display = 'block';
+    }
+  });
+  window.addEventListener('click', hideContextMenu);
+  if (moveUpItem) moveUpItem.onclick = () => {
+    if (contextIndex > 0) {
+      const tmp = currentBha.assemblies[contextIndex];
+      currentBha.assemblies[contextIndex] = currentBha.assemblies[contextIndex - 1];
+      currentBha.assemblies[contextIndex - 1] = tmp;
+      saveCurrentBha();
+      storeSession();
+      renderAssemblyList();
+    }
+    hideContextMenu();
+  };
+  if (moveDownItem) moveDownItem.onclick = () => {
+    if (contextIndex >= 0 && contextIndex < currentBha.assemblies.length - 1) {
+      const tmp = currentBha.assemblies[contextIndex];
+      currentBha.assemblies[contextIndex] = currentBha.assemblies[contextIndex + 1];
+      currentBha.assemblies[contextIndex + 1] = tmp;
+      saveCurrentBha();
+      storeSession();
+      renderAssemblyList();
+    }
+    hideContextMenu();
+  };
+
+  assemblyList.addEventListener('mouseover', e => {
+    const row = e.target.closest('.assy-row');
+    if (!row || !previewCanvas || !previewCtx) return;
+    const idx = parseInt(row.dataset.index, 10);
+    previewCanvas.hidden = false;
+    previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    renderAssembly(previewCtx, currentBha.assemblies[idx], previewCanvas.width / 794);
+  });
+  assemblyList.addEventListener('mouseout', e => {
+    if (previewCanvas) previewCanvas.hidden = true;
+  });
+
+  document.getElementById('printAllBtn').onclick = () => {
+    const scale = 3;
+    const frame = document.createElement('iframe');
+    frame.style.position = 'fixed';
+    frame.style.right = '0';
+    frame.style.bottom = '0';
+    frame.style.width = '0';
+    frame.style.height = '0';
+    frame.style.border = '0';
+    document.body.appendChild(frame);
+    const doc = frame.contentDocument || frame.contentWindow.document;
+    doc.open();
+    doc.write('<html><head><title>' + (currentBha.name || 'BHA') + '</title>');
+    doc.write('<style>@page{margin:0;}body{margin:0;}img{width:100%;height:auto;page-break-after:always;}</style>');
+    doc.write('</head><body>');
+    currentBha.assemblies.forEach((a, i) => {
+      const img = generateAssemblyImage(a, scale);
+      doc.write('<img src="' + img + '">');
+    });
+    doc.write('</body></html>');
+    doc.close();
+    frame.onload = () => { frame.contentWindow.focus(); frame.contentWindow.print(); };
+    frame.contentWindow.onafterprint = () => frame.remove();
+  };
   document.getElementById('addAssyBtn').onclick = () => {
     const num = currentBha.assemblies.length + 1;
     currentBha.assemblies.push({
@@ -2115,9 +2195,15 @@ function renderAssemblyList() {
   list.innerHTML = '';
   currentBha.assemblies.forEach((assy, idx) => {
     const row = document.createElement('div');
+    row.className = 'assy-row';
+    row.dataset.index = idx;
+
+    const num = document.createElement('span');
+    num.className = 'assy-num';
+    num.textContent = (idx + 1) + '.';
 
     const edit = document.createElement('button');
-    edit.className = 'primary';
+    edit.className = 'primary edit-btn';
     edit.textContent = assy.name || 'Assembly ' + (idx + 1);
     edit.onclick = () => {
       currentAssemblyIdx = idx;
@@ -2139,8 +2225,446 @@ function renderAssemblyList() {
       renderAssemblyList();
     };
 
+    row.appendChild(num);
     row.appendChild(edit);
     row.appendChild(del);
     list.appendChild(row);
   });
+}
+
+// ───── Assembly Rendering Utilities ─────
+const PREVIEW_DIAMETER_OFFSET = 20;
+const PREVIEW_FIELD_DEFS = [
+  { id: 'totalLength', label: 'Total L' },
+  { id: 'maxOD', label: 'Max OD' },
+  { id: 'minID', label: 'Minimum ID' },
+  { id: 'fishNeckLength', label: 'Fish neck L' },
+  { id: 'fishNeckOD', label: 'Fish neck OD' },
+  { id: 'weight', label: 'Weight' },
+  { id: 'basket', label: 'Basket' },
+  { id: 'date', label: 'Date' },
+  { id: 'comments', label: 'Comment', double: true }
+];
+
+function hexToRgb(hex) {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  const num = parseInt(hex, 16);
+  return [num >> 16, (num >> 8) & 255, num & 255];
+}
+
+function rgbToHex(r, g, b) {
+  return (
+    '#' + [r, g, b].map(v => {
+      const h = v.toString(16);
+      return h.length === 1 ? '0' + h : h;
+    }).join('')
+  );
+}
+
+function lightenColor(color, p) {
+  const [r, g, b] = hexToRgb(color);
+  const nr = Math.round(r + (255 - r) * p);
+  const ng = Math.round(g + (255 - g) * p);
+  const nb = Math.round(b + (255 - b) * p);
+  return rgbToHex(nr, ng, nb);
+}
+
+function darkenColor(color, p) {
+  const [r, g, b] = hexToRgb(color);
+  const nr = Math.round(r * (1 - p));
+  const ng = Math.round(g * (1 - p));
+  const nb = Math.round(b * (1 - p));
+  return rgbToHex(nr, ng, nb);
+}
+
+function cylinderGradient(ctx, color, x, w) {
+  const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+  grad.addColorStop(0, darkenColor(color, 0.25));
+  grad.addColorStop(0.25, lightenColor(color, 0.2));
+  grad.addColorStop(0.5, lightenColor(color, 0.4));
+  grad.addColorStop(0.75, lightenColor(color, 0.2));
+  grad.addColorStop(1, darkenColor(color, 0.25));
+  return grad;
+}
+
+function partPolygonPoints(p, offX, offY) {
+  const x = offX + (p.x || 0);
+  const y = offY + (p.y || 0);
+  const w = p.width;
+  const h = p.height;
+  const verts = (p.symVertices || []).slice().sort((a,b)=>a.y-b.y);
+  const pts = [];
+  pts.push({x, y});
+  pts.push({x:x+w, y});
+  verts.forEach(v => pts.push({x:x+w+v.dx, y:y+v.y}));
+  pts.push({x:x+w, y:y+h});
+  pts.push({x, y:y+h});
+  for(let i=verts.length-1;i>=0;i--) pts.push({x:x-verts[i].dx, y:y+verts[i].y});
+  return pts;
+}
+
+function drawPart(ctx, p, offX, offY) {
+  const pts = partPolygonPoints(p, offX, offY);
+  if (!pts.length) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.closePath();
+  ctx.fillStyle = cylinderGradient(ctx, p.color || '#ccc', offX + (p.x||0), p.width);
+  ctx.fill();
+  ctx.strokeStyle = '#000';
+  ctx.stroke();
+}
+
+function drawShapes(ctx, comp, offX, offY) {
+  if (!Array.isArray(comp.drawnShapes)) return;
+  comp.drawnShapes.forEach(s => {
+    ctx.lineWidth = s.width || 2;
+    ctx.strokeStyle = '#000';
+    ctx.setLineDash([]);
+    if (s.type === 'line') {
+      ctx.beginPath();
+      ctx.moveTo(offX + s.x1, offY + s.y1);
+      ctx.lineTo(offX + s.x2, offY + s.y2);
+      ctx.stroke();
+    } else if (s.type === 'circle') {
+      ctx.beginPath();
+      ctx.arc(offX + s.cx, offY + s.cy, s.r, 0, Math.PI*2);
+      ctx.stroke();
+    } else if (s.type === 'curve') {
+      ctx.beginPath();
+      ctx.moveTo(offX + s.p0.x, offY + s.p0.y);
+      ctx.quadraticCurveTo(offX + s.p1.x, offY + s.p1.y, offX + s.p2.x, offY + s.p2.y);
+      ctx.stroke();
+    }
+  });
+}
+
+function drawConnector(ctx, part, pos, type) {
+  if (!CONNECTOR_TEMPLATE) return;
+  const scale = (part.width * 0.8) / CONNECTOR_TEMPLATE.width;
+  const w = CONNECTOR_TEMPLATE.width * scale;
+  const h = CONNECTOR_TEMPLATE.height * scale;
+  const flip = (pos === 'top' && type === 'PIN') || (pos === 'bottom' && type === 'BOX');
+  const x0 = part.x + (part.width - w) / 2;
+  let y0;
+  if (pos === 'top') y0 = type === 'PIN' ? part.y - h : part.y;
+  else y0 = type === 'PIN' ? part.y + part.height : part.y + part.height - h;
+
+  ctx.save();
+  ctx.translate(x0, y0);
+  if (flip) {
+    ctx.translate(0, h);
+    ctx.scale(scale, -scale);
+  } else {
+    ctx.scale(scale, scale);
+  }
+
+  CONNECTOR_TEMPLATE.parts.forEach((p) => {
+    const pts = p.points;
+    if (!pts.length) return;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    const baseColor = type === 'BOX' ? '#b3b3b3' : '#cccccc';
+    ctx.fillStyle = cylinderGradient(ctx, baseColor, p.x, p.width);
+    if (type === 'BOX') {
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 2]);
+      ctx.fill();
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      ctx.fill();
+    }
+  });
+
+  CONNECTOR_TEMPLATE.lines.forEach((l) => {
+    ctx.beginPath();
+    ctx.moveTo(l.x1, l.y1);
+    ctx.lineTo(l.x2, l.y2);
+    ctx.strokeStyle = type === 'BOX' ? '#555' : '#000';
+    ctx.lineWidth = 2;
+    if (type === 'BOX') ctx.setLineDash([4, 2]);
+    ctx.stroke();
+    if (type === 'BOX') ctx.setLineDash([]);
+  });
+
+  ctx.restore();
+}
+
+function drawComponent(ctx, comp, x, y, flipped, scale = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  if (flipped) {
+    const b = getComponentBounds(comp);
+    ctx.translate(b.width / 2, b.height / 2);
+    ctx.rotate(Math.PI);
+    ctx.translate(-b.width / 2, -b.height / 2);
+  }
+  comp.parts.forEach(p => drawPart(ctx, p, 0, 0));
+  drawShapes(ctx, comp, 0, 0);
+  comp.parts.forEach(p => {
+    const part = { x: (p.x || 0), y: (p.y || 0), width: p.width, height: p.height };
+    if (p.topConnector && p.topConnector !== 'none')
+      drawConnector(ctx, part, 'top', p.topConnector);
+    if (p.bottomConnector && p.bottomConnector !== 'none')
+      drawConnector(ctx, part, 'bottom', p.bottomConnector);
+  });
+  ctx.restore();
+}
+
+function getComponentBounds(comp) {
+  if (comp._bounds) return comp._bounds;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  comp.parts.forEach(p => {
+    partPolygonPoints(p, 0, 0).forEach(pt => {
+      minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
+      maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
+    });
+    if (CONNECTOR_TEMPLATE) {
+      if (p.topConnector === 'PIN') {
+        const scale = (p.width * 0.8) / CONNECTOR_TEMPLATE.width;
+        minY = Math.min(minY, p.y - CONNECTOR_TEMPLATE.height * scale);
+      }
+      if (p.bottomConnector === 'PIN') {
+        const scale = (p.width * 0.8) / CONNECTOR_TEMPLATE.width;
+        maxY = Math.max(maxY, p.y + p.height + CONNECTOR_TEMPLATE.height * scale);
+      }
+    }
+  });
+  (comp.drawnShapes || []).forEach(s => {
+    if (s.type === 'line') {
+      minX = Math.min(minX, s.x1, s.x2);
+      maxX = Math.max(maxX, s.x1, s.x2);
+      minY = Math.min(minY, s.y1, s.y2);
+      maxY = Math.max(maxY, s.y1, s.y2);
+    } else if (s.type === 'circle') {
+      minX = Math.min(minX, s.cx - s.r);
+      maxX = Math.max(maxX, s.cx + s.r);
+      minY = Math.min(minY, s.cy - s.r);
+      maxY = Math.max(maxY, s.cy + s.r);
+    } else if (s.type === 'curve') {
+      [s.p0, s.p1, s.p2].forEach(pt => {
+        minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+        minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y);
+      });
+    }
+  });
+  if (minX === Infinity) { minX = minY = 0; maxX = maxY = 0; }
+  comp._bounds = {minX, minY, maxX, maxY, width:maxX-minX, height:maxY-minY};
+  return comp._bounds;
+}
+
+function localToCanvas(it, lx, ly) {
+  const b = getComponentBounds(it.comp);
+  if (it.flipped) {
+    lx = b.width - lx;
+    ly = b.height - ly;
+  }
+  return { x: it.x + lx * it.scale, y: it.y + ly * it.scale };
+}
+
+function drawDimension(ctx, dim, scale = 1, textScale = 1) {
+  const p1 = localToCanvas(dim.p1.item, dim.p1.x, dim.p1.y);
+  const p2 = localToCanvas(dim.p2.item, dim.p2.x, dim.p2.y);
+  const baseX = Math.max(p1.x, p2.x) + 20;
+  const x = (baseX + (dim.offset || 0)) * scale;
+  const y1 = p1.y * scale;
+  const y2 = p2.y * scale;
+  const top = Math.min(y1, y2);
+  const bottom = Math.max(y1, y2);
+  const len = Math.abs(bottom - top);
+  const label = dim.label !== null && dim.label !== undefined ? dim.label : len.toFixed(0);
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1 * scale;
+  ctx.beginPath();
+  ctx.moveTo(p1.x * scale, p1.y * scale);
+  ctx.lineTo(x, p1.y * scale);
+  ctx.moveTo(p2.x * scale, p2.y * scale);
+  ctx.lineTo(x, p2.y * scale);
+  ctx.moveTo(x, top);
+  ctx.lineTo(x, bottom);
+  ctx.stroke();
+
+  const a = 6 * scale;
+  ctx.beginPath();
+  ctx.moveTo(x - a, top + a);
+  ctx.lineTo(x, top);
+  ctx.lineTo(x + a, top + a);
+  ctx.moveTo(x - a, bottom - a);
+  ctx.lineTo(x, bottom);
+  ctx.lineTo(x + a, bottom - a);
+  ctx.stroke();
+
+  ctx.fillStyle = '#000';
+  ctx.font = (12 * scale * textScale) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(label, x, top - 4 * scale);
+}
+
+function formatTwelfthInches(val) {
+  if (typeof val !== 'number' || isNaN(val)) return '';
+  const sign = val < 0 ? -1 : 1;
+  val = Math.abs(val);
+  const whole = Math.floor(val);
+  let frac = Math.round((val - whole) * 12);
+  if (frac === 12) { frac = 0; return (sign < 0 ? '-' : '') + (whole + 1) + '"'; }
+  if (frac === 0) return (sign < 0 ? '-' : '') + whole + '"';
+  const g = gcd(frac, 12);
+  frac /= g;
+  const denom = 12 / g;
+  const prefix = sign < 0 ? '-' : '';
+  return prefix + (whole ? whole + ' ' : '') + frac + '/' + denom + '"';
+}
+
+function gcd(a, b) {
+  while (b) { const t = a % b; a = b; b = t; }
+  return a;
+}
+
+function drawDiameter(ctx, dia, scale = 1, textScale = 1) {
+  const b = getComponentBounds(dia.item.comp);
+  let ly = dia.y;
+  if (dia.item.flipped) ly = b.height - ly;
+  const y = (dia.item.y + (ly + (dia.offset || 0)) * dia.item.scale) * scale;
+  const left = (dia.item.x + b.minX * dia.item.scale) * scale;
+  const right = (dia.item.x + b.maxX * dia.item.scale) * scale;
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1 * scale;
+  const a = 6 * scale;
+  ctx.beginPath();
+  ctx.moveTo(left, y);
+  ctx.lineTo(right, y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(left + a, y - a);
+  ctx.lineTo(left, y);
+  ctx.lineTo(left + a, y + a);
+  ctx.moveTo(right - a, y - a);
+  ctx.lineTo(right, y);
+  ctx.lineTo(right - a, y + a);
+  ctx.stroke();
+
+  ctx.fillStyle = '#000';
+  ctx.font = (12 * scale * textScale) + 'px sans-serif';
+  const rawVal = dia.item.comp.od !== undefined ? dia.item.comp.od : (b.width * dia.item.scale) / 12;
+  const val = '\u00F8 ' + formatTwelfthInches(rawVal);
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(val, left - PREVIEW_DIAMETER_OFFSET * scale - 4 * scale, y);
+}
+
+function drawTextBox(ctx, tb, scale = 1, textScale = 1) {
+  ctx.fillStyle = '#000';
+  ctx.font = (16 * scale * textScale) + 'px sans-serif';
+  ctx.textBaseline = 'top';
+  ctx.fillText(tb.text, tb.x * scale, tb.y * scale);
+}
+
+function renderAssembly(ctx, assy, scale) {
+  const width = 794 * scale;
+  const height = 1123 * scale;
+  const margin = 20 * scale;
+  ctx.lineWidth = 2 * scale;
+  ctx.strokeStyle = '#000';
+  ctx.clearRect(0, 0, width, height);
+  ctx.strokeRect(0, 0, width, height);
+  ctx.strokeRect(margin, margin, width - margin * 2, height - margin * 2);
+
+  ctx.font = (24 * scale) + 'px sans-serif';
+  ctx.fillStyle = '#000';
+  ctx.fillText(assy.name || '', margin + 4 * scale, margin + 24 * scale);
+
+  const fields = assy.fields || {};
+  const active = PREVIEW_FIELD_DEFS.filter(d => fields[d.id] && fields[d.id].enabled);
+  if (active.length) {
+    const tbW = 320 * scale;
+    const smallRow = 20 * scale;
+    const titleCol = 100 * scale;
+    const rowCount = active.reduce((a, d) => a + (d.double ? 2 : 1), 0);
+    const tbH = smallRow * rowCount;
+    const x = width - margin - tbW;
+    const y = height - margin - tbH;
+    ctx.strokeRect(x, y, tbW, tbH);
+
+    let curY = y;
+    active.forEach(def => {
+      const rowH = smallRow * (def.double ? 2 : 1);
+      ctx.beginPath();
+      ctx.moveTo(x, curY + rowH);
+      ctx.lineTo(x + tbW, curY + rowH);
+      ctx.moveTo(x + titleCol, curY);
+      ctx.lineTo(x + titleCol, curY + rowH);
+      ctx.stroke();
+      ctx.font = (12 * scale * 1.2) + 'px sans-serif';
+      ctx.fillText(def.label + ':', x + 4 * scale, curY + 14 * scale);
+      if (def.double) {
+        const lines = String(fields[def.id].value || '').split(/\n/);
+        ctx.fillText(lines[0] || '', x + titleCol + 4 * scale, curY + 14 * scale);
+        if (lines[1]) ctx.fillText(lines[1], x + titleCol + 4 * scale, curY + 14 * scale + smallRow);
+      } else {
+        ctx.fillText(fields[def.id].value || '', x + titleCol + 4 * scale, curY + 14 * scale);
+      }
+      curY += rowH;
+    });
+  }
+
+  const items = (assy.items || []).map(it => ({
+    comp: it.comp,
+    x: it.x,
+    y: it.y,
+    flipped: it.flipped || false,
+    scale: typeof it.scale === 'number' ? it.scale : 1,
+    attachedTo: null,
+    attachedChildren: []
+  }));
+  if (Array.isArray(assy.items)) {
+    assy.items.forEach((it, i) => {
+      if (typeof it.parentIndex === 'number') {
+        const parent = items[it.parentIndex];
+        if (parent) {
+          items[i].attachedTo = parent;
+          parent.attachedChildren.push(items[i]);
+        }
+      }
+    });
+  }
+
+  const dimensions = (assy.dimensions || []).map(d => ({
+    p1: { item: items[d.p1.itemIndex], x: d.p1.x, y: d.p1.y },
+    p2: { item: items[d.p2.itemIndex], x: d.p2.x, y: d.p2.y },
+    offset: d.offset || 0,
+    label: d.label != null ? d.label : null
+  }));
+  const diameters = (assy.diameters || []).map(di => ({
+    item: items[di.itemIndex],
+    y: di.y,
+    offset: di.offset || 0,
+    style: di.style || 'double'
+  }));
+  const textBoxes = (assy.texts || []).map(t => ({ text: t.text || '', x: t.x || 0, y: t.y || 0 }));
+
+  items.forEach(item => {
+    ctx.save();
+    ctx.scale(scale, scale);
+    drawComponent(ctx, item.comp, item.x, item.y, item.flipped, item.scale || 1);
+    ctx.restore();
+  });
+  dimensions.forEach(d => drawDimension(ctx, d, scale, 1.2));
+  diameters.forEach(d => drawDiameter(ctx, d, scale, 1.2));
+  textBoxes.forEach(t => drawTextBox(ctx, t, scale, 1.2));
+}
+
+function generateAssemblyImage(assy, scale) {
+  const c = document.createElement('canvas');
+  c.width = 794 * scale;
+  c.height = 1123 * scale;
+  renderAssembly(c.getContext('2d'), assy, scale);
+  return c.toDataURL('image/png');
 }

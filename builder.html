@@ -16,18 +16,6 @@
       <h2>Private Components</h2>
       <input type="file" id="privateInput" accept="application/json" multiple />
       <div id="privateList"></div>
-      <h2>Fields</h2>
-      <div id="fieldList" class="field-list">
-        <label><input type="checkbox" data-field="shankOD"> Shank OD</label><br>
-        <label><input type="checkbox" data-field="totalLength"> Total length</label><br>
-        <label><input type="checkbox" data-field="maxOD"> Max OD</label><br>
-        <label><input type="checkbox" data-field="fishNeckLength"> Fish neck length</label><br>
-        <label><input type="checkbox" data-field="fishNeckOD"> Fish neck OD</label><br>
-        <label><input type="checkbox" data-field="minID"> Minimum ID</label><br>
-        <label><input type="checkbox" data-field="date"> Date</label><br>
-        <label><input type="checkbox" data-field="basket"> Basket</label><br>
-        <label><input type="checkbox" data-field="comments"> Comments</label>
-      </div>
     </aside>
     <main id="dropZone" class="dropzone">
       <canvas id="bhaCanvas" width="794" height="1123"></canvas>
@@ -39,6 +27,20 @@
       <button id="scaleDownBtn" class="secondary scale-down-btn">Scale Down</button>
       <button id="printPdfBtn" class="success print-btn">Print PDF</button>
       <button id="backAssyBtn" class="secondary back-btn">Back to Assemblies</button>
+      <div id="fieldContainer" class="field-container">
+        <h2>Fields</h2>
+        <div id="fieldList" class="field-list">
+          <label><input type="checkbox" data-field="totalLength"> Total L</label><br>
+          <label><input type="checkbox" data-field="maxOD"> Max OD</label><br>
+          <label><input type="checkbox" data-field="minID"> Minimum ID</label><br>
+          <label><input type="checkbox" data-field="fishNeckLength"> Fish neck L</label><br>
+          <label><input type="checkbox" data-field="fishNeckOD"> Fish neck OD</label><br>
+          <label><input type="checkbox" data-field="weight"> Weight</label><br>
+          <label><input type="checkbox" data-field="basket"> Basket</label><br>
+          <label><input type="checkbox" data-field="date"> Date</label><br>
+          <label><input type="checkbox" data-field="comments"> Comment</label>
+        </div>
+      </div>
       <ul id="contextMenu" class="context-menu">
         <li id="modifyItem" class="context-menu-item">Modify</li>
         <li id="removeLengthItem" class="context-menu-item">Remove length</li>

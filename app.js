@@ -1055,6 +1055,7 @@ if (bhaCanvas) {
   function drawTextBox(ctx, tb, scale = 1, textScale = 1) {
     ctx.fillStyle = '#000';
     ctx.font = (16 * scale * textScale) + 'px sans-serif';
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(tb.text, tb.x * scale, tb.y * scale);
   }
@@ -2663,6 +2664,7 @@ function drawDiameter(ctx, dia, scale = 1, textScale = 1) {
 function drawTextBox(ctx, tb, scale = 1, textScale = 1) {
   ctx.fillStyle = '#000';
   ctx.font = (16 * scale * textScale) + 'px sans-serif';
+  ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText(tb.text, tb.x * scale, tb.y * scale);
 }

@@ -300,6 +300,7 @@ if (bhaCanvas) {
   let previewMouseX = 0;
   let previewMouseY = 0;
 
+
   function getCanvasPos(e) {
     const rect = bhaCanvas.getBoundingClientRect();
     return {
@@ -337,6 +338,26 @@ if (bhaCanvas) {
     redraw();
   });
 
+  const FIELD_DEFS = [
+    { id: 'shankOD', label: 'Shank OD' },
+    { id: 'totalLength', label: 'Total length' },
+    { id: 'maxOD', label: 'Max OD' },
+    { id: 'fishNeckLength', label: 'Fish neck length' },
+    { id: 'fishNeckOD', label: 'Fish neck OD' },
+    { id: 'minID', label: 'Minimum ID' },
+    { id: 'date', label: 'Date', getDefault: () => new Date().toISOString().split('T')[0] },
+    { id: 'basket', label: 'Basket' },
+    { id: 'comments', label: 'Comments', double: true }
+  ];
+  const fields = assyObj.fields || {};
+  FIELD_DEFS.forEach(def => {
+    if (!fields[def.id]) {
+      fields[def.id] = { value: def.getDefault ? def.getDefault() : '', enabled: false };
+    }
+  });
+  assyObj.fields = fields;
+  const fieldRects = [];
+
   fetch('public_components.json')
     .then(r => r.json())
     .then(data => {
@@ -361,6 +382,21 @@ if (bhaCanvas) {
   }
 
   loadPrivateComponents();
+
+  const fieldListEl = document.getElementById('fieldList');
+  if (fieldListEl) {
+    fieldListEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      const id = cb.dataset.field;
+      if (fields[id]) cb.checked = fields[id].enabled;
+      cb.addEventListener('change', () => {
+        if (!fields[id]) return;
+        fields[id].enabled = cb.checked;
+        if (id === 'date' && cb.checked && !fields[id].value)
+          fields[id].value = new Date().toISOString().split('T')[0];
+        redraw();
+      });
+    });
+  }
 
   const privateInput = document.getElementById('privateInput');
   privateInput.addEventListener('change', e => {
@@ -1131,6 +1167,19 @@ if (bhaCanvas) {
         break;
       }
     }
+
+    for (const rect of fieldRects) {
+      if (x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h) {
+        const def = FIELD_DEFS.find(d => d.id === rect.id);
+        const cur = fields[rect.id].value || '';
+        const input = prompt('Edit ' + def.label + ':', cur);
+        if (input !== null) {
+          fields[rect.id].value = input.trim();
+          redraw();
+        }
+        break;
+      }
+    }
   });
 
   window.addEventListener('mousemove', e => {
@@ -1604,25 +1653,44 @@ if (bhaCanvas) {
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, bhaCanvas.width, bhaCanvas.height);
     ctx.strokeRect(margin, margin, bhaCanvas.width - margin * 2, bhaCanvas.height - margin * 2);
-    const tbW = 270; // 50% larger title block
-    const tbH = 80;
-    const smallRow = tbH / 4;
-    const titleCol = 50; // narrow column just wide enough for label
+
+    ctx.font = '24px sans-serif';
+    ctx.fillStyle = '#000';
+    ctx.fillText(assyObj.name, margin + 4, margin + 24);
+
+    fieldRects.length = 0;
+    const active = FIELD_DEFS.filter(d => fields[d.id] && fields[d.id].enabled);
+    if (!active.length) return;
+    const tbW = 270;
+    const smallRow = 20;
+    const titleCol = 50;
+    const rowCount = active.reduce((a, d) => a + (d.double ? 2 : 1), 0);
+    const tbH = smallRow * rowCount;
     const x = bhaCanvas.width - margin - tbW;
     const y = bhaCanvas.height - margin - tbH;
     ctx.strokeRect(x, y, tbW, tbH);
-    ctx.beginPath();
-    ctx.moveTo(x, y + smallRow);
-    ctx.lineTo(x + tbW, y + smallRow);
-    ctx.moveTo(x + titleCol, y);
-    ctx.lineTo(x + titleCol, y + smallRow);
-    ctx.stroke();
 
-    ctx.font = '12px sans-serif';
-    ctx.fillStyle = '#000';
-    ctx.fillText('Title:', x + 4, y + 14);
-    ctx.fillText(assyObj.name, x + titleCol + 4, y + 14);
-    ctx.fillText('Comment:', x + 4, y + smallRow + 14);
+    let curY = y;
+    active.forEach(def => {
+      const rowH = smallRow * (def.double ? 2 : 1);
+      ctx.beginPath();
+      ctx.moveTo(x, curY + rowH);
+      ctx.lineTo(x + tbW, curY + rowH);
+      ctx.moveTo(x + titleCol, curY);
+      ctx.lineTo(x + titleCol, curY + rowH);
+      ctx.stroke();
+      ctx.font = '12px sans-serif';
+      ctx.fillText(def.label + ':', x + 4, curY + 14);
+      if (def.double) {
+        const lines = String(fields[def.id].value || '').split(/\n/);
+        ctx.fillText(lines[0] || '', x + titleCol + 4, curY + 14);
+        if (lines[1]) ctx.fillText(lines[1], x + titleCol + 4, curY + 14 + smallRow);
+      } else {
+        ctx.fillText(fields[def.id].value || '', x + titleCol + 4, curY + 14);
+      }
+      fieldRects.push({ id: def.id, x: x + titleCol, y: curY, w: tbW - titleCol, h: rowH });
+      curY += rowH;
+    });
   }
 
   function redraw() {
@@ -1754,25 +1822,42 @@ if (bhaCanvas) {
     ctx.strokeRect(0, 0, width, height);
     ctx.strokeRect(margin, margin, width - margin * 2, height - margin * 2);
 
-    const tbW = 270 * scale;
-    const tbH = 80 * scale;
-    const smallRow = tbH / 4;
-    const titleCol = 50 * scale;
-    const x = width - margin - tbW;
-    const y = height - margin - tbH;
-    ctx.strokeRect(x, y, tbW, tbH);
-    ctx.beginPath();
-    ctx.moveTo(x, y + smallRow);
-    ctx.lineTo(x + tbW, y + smallRow);
-    ctx.moveTo(x + titleCol, y);
-    ctx.lineTo(x + titleCol, y + smallRow);
-    ctx.stroke();
-
-    ctx.font = (12 * scale * PRINT_TEXT_SCALE) + 'px sans-serif';
+    ctx.font = (24 * scale) + 'px sans-serif';
     ctx.fillStyle = '#000';
-    ctx.fillText('Title:', x + 4 * scale, y + 14 * scale);
-    ctx.fillText(assyObj.name, x + titleCol + 4 * scale, y + 14 * scale);
-    ctx.fillText('Comment:', x + 4 * scale, y + smallRow + 14 * scale);
+    ctx.fillText(assyObj.name, margin + 4 * scale, margin + 24 * scale);
+
+    const active = FIELD_DEFS.filter(d => fields[d.id] && fields[d.id].enabled);
+    if (active.length) {
+      const tbW = 270 * scale;
+      const smallRow = 20 * scale;
+      const titleCol = 50 * scale;
+      const rowCount = active.reduce((a, d) => a + (d.double ? 2 : 1), 0);
+      const tbH = smallRow * rowCount;
+      const x = width - margin - tbW;
+      const y = height - margin - tbH;
+      ctx.strokeRect(x, y, tbW, tbH);
+
+      let curY = y;
+      active.forEach(def => {
+        const rowH = smallRow * (def.double ? 2 : 1);
+        ctx.beginPath();
+        ctx.moveTo(x, curY + rowH);
+        ctx.lineTo(x + tbW, curY + rowH);
+        ctx.moveTo(x + titleCol, curY);
+        ctx.lineTo(x + titleCol, curY + rowH);
+        ctx.stroke();
+        ctx.font = (12 * scale * PRINT_TEXT_SCALE) + 'px sans-serif';
+        ctx.fillText(def.label + ':', x + 4 * scale, curY + 14 * scale);
+        if (def.double) {
+          const lines = String(fields[def.id].value || '').split(/\n/);
+          ctx.fillText(lines[0] || '', x + titleCol + 4 * scale, curY + 14 * scale);
+          if (lines[1]) ctx.fillText(lines[1], x + titleCol + 4 * scale, curY + 14 * scale + smallRow);
+        } else {
+          ctx.fillText(fields[def.id].value || '', x + titleCol + 4 * scale, curY + 14 * scale);
+        }
+        curY += rowH;
+      });
+    }
 
     placed.forEach(item => {
       ctx.save();
@@ -1823,6 +1908,7 @@ if (bhaCanvas) {
   document.getElementById('backAssyBtn').onclick = () => {
     assyObj.items = placed;
     assyObj.texts = textBoxes;
+    assyObj.fields = fields;
     saveCurrentBha();
     storeSession();
     // Replace the builder page in history so returning from assemblies

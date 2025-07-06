@@ -26,6 +26,8 @@ button:hover{filter:brightness(.95);}
 .centered>button{margin:0.5rem 0;}
 .view.builder .back-btn{position:absolute;bottom:1rem;left:1rem;margin-top:0;}
 .view.builder .print-btn{position:absolute;bottom:4rem;left:1rem;}
+.view.builder .toggle-border-btn{position:absolute;bottom:4rem;left:10rem;}
+.view.builder .toggle-title-btn{position:absolute;bottom:4rem;left:22rem;}
 .view.builder .scale-down-btn{position:absolute;bottom:7rem;left:1rem;}
 .view.builder .scale-up-btn{position:absolute;bottom:10rem;left:1rem;}
 .view.builder .add-length-btn{position:absolute;bottom:13rem;left:1rem;}

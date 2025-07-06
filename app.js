@@ -109,7 +109,7 @@ loadSession();
 
 function normalizeAssembly(a, idx) {
   if (Array.isArray(a)) {
-    return { name: 'Assembly ' + (idx + 1), items: a, texts: [], dimensions: [], diameters: [], fields: {}, pdfImage: null };
+    return { name: 'Assembly ' + (idx + 1), items: a, texts: [], dimensions: [], diameters: [], fields: {}, pdfImage: null, showBorder: true, showTitle: true };
   }
   if (a && typeof a === 'object') {
     return {
@@ -119,10 +119,12 @@ function normalizeAssembly(a, idx) {
       dimensions: Array.isArray(a.dimensions) ? a.dimensions : [],
       diameters: Array.isArray(a.diameters) ? a.diameters : [],
       fields: a.fields || {},
-      pdfImage: typeof a.pdfImage === 'string' ? a.pdfImage : null
+      pdfImage: typeof a.pdfImage === 'string' ? a.pdfImage : null,
+      showBorder: a.showBorder !== false,
+      showTitle: a.showTitle !== false
     };
   }
-  return { name: 'Assembly ' + (idx + 1), items: [], texts: [], dimensions: [], diameters: [], fields: {}, pdfImage: null };
+  return { name: 'Assembly ' + (idx + 1), items: [], texts: [], dimensions: [], diameters: [], fields: {}, pdfImage: null, showBorder: true, showTitle: true };
 }
 
 function loadSession() {
@@ -340,7 +342,9 @@ if (assemblyList) {
       dimensions: [],
       diameters: [],
       fields: {},
-      pdfImage: null
+      pdfImage: null,
+      showBorder: true,
+      showTitle: true
     });
     currentAssemblyIdx = currentBha.assemblies.length - 1;
     saveCurrentBha();
@@ -479,8 +483,12 @@ if (bhaCanvas) {
     dimensions: [],
     diameters: [],
     fields: {},
-    pdfImage: null
+    pdfImage: null,
+    showBorder: true,
+    showTitle: true
   };
+  if (assyObj.showBorder === undefined) assyObj.showBorder = true;
+  if (assyObj.showTitle === undefined) assyObj.showTitle = true;
   if (assyObj.pdfImage) {
     pdfImg = new Image();
     pdfImg.src = assyObj.pdfImage;
@@ -1805,15 +1813,19 @@ if (bhaCanvas) {
     const margin = 20;
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
-    ctx.strokeRect(0, 0, bhaCanvas.width, bhaCanvas.height);
-    ctx.strokeRect(margin, margin, bhaCanvas.width - margin * 2, bhaCanvas.height - margin * 2);
+    if (assyObj.showBorder !== false) {
+      ctx.strokeRect(0, 0, bhaCanvas.width, bhaCanvas.height);
+      ctx.strokeRect(margin, margin, bhaCanvas.width - margin * 2, bhaCanvas.height - margin * 2);
+    }
     if (pdfImg && pdfImg.complete) {
       ctx.drawImage(pdfImg, margin, margin, bhaCanvas.width - margin * 2, bhaCanvas.height - margin * 2);
     }
 
-    ctx.font = '24px sans-serif';
-    ctx.fillStyle = '#000';
-    ctx.fillText(assyObj.name, margin + 4, margin + 24);
+    if (assyObj.showTitle !== false) {
+      ctx.font = '24px sans-serif';
+      ctx.fillStyle = '#000';
+      ctx.fillText(assyObj.name, margin + 4, margin + 24);
+    }
 
     fieldRects.length = 0;
     const active = FIELD_DEFS.filter(d => fields[d.id] && fields[d.id].enabled);
@@ -2007,6 +2019,34 @@ if (bhaCanvas) {
     };
   }
 
+  const toggleBorderBtn = document.getElementById('toggleBorderBtn');
+  if (toggleBorderBtn) {
+    const setTxt = () => {
+      toggleBorderBtn.textContent = assyObj.showBorder ? 'Hide Border' : 'Show Border';
+    };
+    setTxt();
+    toggleBorderBtn.onclick = () => {
+      assyObj.showBorder = !assyObj.showBorder;
+      setTxt();
+      redraw();
+      saveCurrentBha();
+    };
+  }
+
+  const toggleTitleBtn = document.getElementById('toggleTitleBtn');
+  if (toggleTitleBtn) {
+    const setTxt = () => {
+      toggleTitleBtn.textContent = assyObj.showTitle ? 'Hide Title' : 'Show Title';
+    };
+    setTxt();
+    toggleTitleBtn.onclick = () => {
+      assyObj.showTitle = !assyObj.showTitle;
+      setTxt();
+      redraw();
+      saveCurrentBha();
+    };
+  }
+
   function renderForPrint(ctx, scale) {
     const width = bhaCanvas.width * scale;
     const height = bhaCanvas.height * scale;
@@ -2014,12 +2054,16 @@ if (bhaCanvas) {
     ctx.lineWidth = 2 * scale;
     ctx.strokeStyle = '#000';
     ctx.clearRect(0, 0, width, height);
-    ctx.strokeRect(0, 0, width, height);
-    ctx.strokeRect(margin, margin, width - margin * 2, height - margin * 2);
+    if (assyObj.showBorder !== false) {
+      ctx.strokeRect(0, 0, width, height);
+      ctx.strokeRect(margin, margin, width - margin * 2, height - margin * 2);
+    }
 
-    ctx.font = (24 * scale) + 'px sans-serif';
-    ctx.fillStyle = '#000';
-    ctx.fillText(assyObj.name, margin + 4 * scale, margin + 24 * scale);
+    if (assyObj.showTitle !== false) {
+      ctx.font = (24 * scale) + 'px sans-serif';
+      ctx.fillStyle = '#000';
+      ctx.fillText(assyObj.name, margin + 4 * scale, margin + 24 * scale);
+    }
 
     const active = FIELD_DEFS.filter(d => fields[d.id] && fields[d.id].enabled);
     if (active.length) {
@@ -2626,8 +2670,10 @@ function renderAssembly(ctx, assy, scale) {
   ctx.lineWidth = 2 * scale;
   ctx.strokeStyle = '#000';
   ctx.clearRect(0, 0, width, height);
-  ctx.strokeRect(0, 0, width, height);
-  ctx.strokeRect(margin, margin, width - margin * 2, height - margin * 2);
+  if (assy.showBorder !== false) {
+    ctx.strokeRect(0, 0, width, height);
+    ctx.strokeRect(margin, margin, width - margin * 2, height - margin * 2);
+  }
   if (assy.pdfImage) {
     if (!assy._pdfImg) {
       const img = new Image();
@@ -2639,9 +2685,11 @@ function renderAssembly(ctx, assy, scale) {
     }
   }
 
-  ctx.font = (24 * scale) + 'px sans-serif';
-  ctx.fillStyle = '#000';
-  ctx.fillText(assy.name || '', margin + 4 * scale, margin + 24 * scale);
+  if (assy.showTitle !== false) {
+    ctx.font = (24 * scale) + 'px sans-serif';
+    ctx.fillStyle = '#000';
+    ctx.fillText(assy.name || '', margin + 4 * scale, margin + 24 * scale);
+  }
 
   const fields = assy.fields || {};
   const active = PREVIEW_FIELD_DEFS.filter(d => fields[d.id] && fields[d.id].enabled);

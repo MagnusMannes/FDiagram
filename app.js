@@ -1744,6 +1744,35 @@ if (bhaCanvas) {
       textBoxes.push({ text: t.text || '', x: t.x || 0, y: t.y || 0 });
     });
   }
+
+  if (Array.isArray(assyObj.dimensions)) {
+    assyObj.dimensions.forEach(d => {
+      const p1 = placed[d.p1.itemIndex];
+      const p2 = placed[d.p2.itemIndex];
+      if (p1 && p2) {
+        dimensions.push({
+          p1: { item: p1, x: d.p1.x, y: d.p1.y },
+          p2: { item: p2, x: d.p2.x, y: d.p2.y },
+          offset: d.offset || 0,
+          label: d.label != null ? d.label : null
+        });
+      }
+    });
+  }
+
+  if (Array.isArray(assyObj.diameters)) {
+    assyObj.diameters.forEach(di => {
+      const it = placed[di.itemIndex];
+      if (it) {
+        diameters.push({
+          item: it,
+          y: di.y,
+          offset: di.offset || 0,
+          style: di.style || 'double'
+        });
+      }
+    });
+  }
   redraw();
 
   document.getElementById('scaleUpBtn').onclick = () => {
@@ -1906,8 +1935,30 @@ if (bhaCanvas) {
   };
 
   document.getElementById('backAssyBtn').onclick = () => {
-    assyObj.items = placed;
-    assyObj.texts = textBoxes;
+    const cleanItems = placed.map(p => ({
+      comp: p.comp,
+      x: p.x,
+      y: p.y,
+      flipped: !!p.flipped,
+      scale: typeof p.scale === 'number' ? p.scale : 1
+    }));
+    const idxMap = new Map();
+    cleanItems.forEach((_, i) => idxMap.set(placed[i], i));
+
+    assyObj.items = cleanItems;
+    assyObj.texts = textBoxes.map(t => ({ text: t.text, x: t.x, y: t.y }));
+    assyObj.dimensions = dimensions.map(d => ({
+      p1: { itemIndex: idxMap.get(d.p1.item), x: d.p1.x, y: d.p1.y },
+      p2: { itemIndex: idxMap.get(d.p2.item), x: d.p2.x, y: d.p2.y },
+      offset: d.offset || 0,
+      label: d.label != null ? d.label : null
+    }));
+    assyObj.diameters = diameters.map(di => ({
+      itemIndex: idxMap.get(di.item),
+      y: di.y,
+      offset: di.offset || 0,
+      style: di.style || 'double'
+    }));
     assyObj.fields = fields;
     saveCurrentBha();
     storeSession();

@@ -327,7 +327,7 @@ if (assemblyList) {
     const doc = frame.contentDocument || frame.contentWindow.document;
     doc.open();
     doc.write('<html><head><title>' + (currentBha.name || 'BHA') + '</title>');
-    doc.write('<style>@page{margin:0;}body{margin:0;}img{width:100%;height:auto;page-break-after:always;}</style>');
+    doc.write('<style>@page{size:210mm 297mm;margin:0;}body{margin:0;}img{width:100%;height:auto;page-break-after:always;}</style>');
     doc.write('</head><body>');
     currentBha.assemblies.forEach((a, i) => {
       const img = generateAssemblyImage(a, scale);
@@ -2068,6 +2068,9 @@ if (bhaCanvas) {
       ctx.strokeRect(0, 0, width, height);
       ctx.strokeRect(margin, margin, width - margin * 2, height - margin * 2);
     }
+    if (pdfImg && pdfImg.complete) {
+      ctx.drawImage(pdfImg, margin, margin, width - margin * 2, height - margin * 2);
+    }
 
     if (assyObj.showTitle !== false) {
       ctx.font = (24 * scale) + 'px sans-serif';
@@ -2142,7 +2145,7 @@ if (bhaCanvas) {
     const doc = frame.contentDocument || frame.contentWindow.document;
     doc.open();
     doc.write('<html><head><title>' + fileName + '</title>');
-    doc.write('<style>@page{margin:0;}body{margin:0;}img{width:100%;height:auto;}</style>');
+    doc.write('<style>@page{size:210mm 297mm;margin:0;}body{margin:0;}img{width:100%;height:auto;}</style>');
     doc.write('</head><body>');
     doc.write('<img src="' + imgData + '">');
     doc.write('</body></html>');

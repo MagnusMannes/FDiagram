@@ -315,7 +315,7 @@ if (assemblyList) {
   });
 
   document.getElementById('printAllBtn').onclick = () => {
-    const scale = 3;
+    const scale = 4; // roughly 400 DPI for A4
     const frame = document.createElement('iframe');
     frame.style.position = 'fixed';
     frame.style.right = '0';
@@ -2133,7 +2133,7 @@ if (bhaCanvas) {
     const stamp = now.toISOString().replace(/[:T]/g, '-').split('.')[0];
     const fileName = (assyObj.name || 'assembly') + '_' + stamp;
 
-    const scale = 3; // roughly 300 DPI for A4
+    const scale = 4; // roughly 400 DPI for A4
     const pCanvas = document.createElement('canvas');
     pCanvas.width = bhaCanvas.width * scale;
     pCanvas.height = bhaCanvas.height * scale;

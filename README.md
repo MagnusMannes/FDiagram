@@ -1,6 +1,5 @@
 # FDiagram
-Tool for FD's
-
+Tool for managing fishing diagrams and BHAs
 ## Printing
 
 Use the **Print PDF** button on the builder page to generate an A4 image.

@@ -362,38 +362,44 @@ if (assemblyList) {
   if (uploadBtn && uploadInput) {
     uploadBtn.onclick = () => uploadInput.click();
     uploadInput.onchange = async () => {
-      const file = uploadInput.files[0];
-      if (!file) return;
-      const url = URL.createObjectURL(file);
-      try {
-        const pdf = await pdfjsLib.getDocument(url).promise;
-        const page = await pdf.getPage(1);
-        const viewport = page.getViewport({ scale: 2 });
-        const c = document.createElement('canvas');
-        c.width = viewport.width;
-        c.height = viewport.height;
-        await page.render({ canvasContext: c.getContext('2d'), viewport }).promise;
-        const imgData = c.toDataURL('image/png');
-        const num = currentBha.assemblies.length + 1;
-        currentBha.assemblies.push({
-          name: file.name.replace(/\.pdf$/i, '') || 'Assembly ' + num,
-          items: [],
-          texts: [],
-          dimensions: [],
-          diameters: [],
-          fields: {},
-          pdfImage: imgData
-        });
-        currentAssemblyIdx = currentBha.assemblies.length - 1;
-        saveCurrentBha();
-        storeSession();
-        location.href = 'builder.html';
-      } catch (err) {
-        alert('Failed to load PDF');
-      } finally {
-        URL.revokeObjectURL(url);
-        uploadInput.value = '';
+      const files = Array.from(uploadInput.files || []);
+      if (!files.length) return;
+      for (const file of files) {
+        const url = URL.createObjectURL(file);
+        try {
+          const pdf = await pdfjsLib.getDocument(url).promise;
+          for (let p = 1; p <= pdf.numPages; p++) {
+            const page = await pdf.getPage(p);
+            const viewport = page.getViewport({ scale: 2 });
+            const c = document.createElement('canvas');
+            c.width = viewport.width;
+            c.height = viewport.height;
+            await page.render({ canvasContext: c.getContext('2d'), viewport }).promise;
+            const imgData = c.toDataURL('image/png');
+            const num = currentBha.assemblies.length + 1;
+            const base = file.name.replace(/\.pdf$/i, '') || 'Assembly ' + num;
+            const name = pdf.numPages > 1 ? `${base} - p${p}` : base;
+            currentBha.assemblies.push({
+              name,
+              items: [],
+              texts: [],
+              dimensions: [],
+              diameters: [],
+              fields: {},
+              pdfImage: imgData
+            });
+          }
+        } catch (err) {
+          alert('Failed to load PDF');
+        } finally {
+          URL.revokeObjectURL(url);
+        }
       }
+      currentAssemblyIdx = currentBha.assemblies.length - 1;
+      saveCurrentBha();
+      storeSession();
+      location.href = 'builder.html';
+      uploadInput.value = '';
     };
   }
   document.getElementById('backMainBtn').onclick = () => {

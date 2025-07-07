@@ -4,6 +4,10 @@ let currentAssembly = [];
 let currentAssemblyIdx = 0;
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
+// Scale used when rendering imported PDF pages to images. Higher values
+// produce better quality at the cost of memory usage.
+const PDF_IMPORT_SCALE = 4; // default was 2
+
 let CONNECTOR_TEMPLATE = null;
 
 function preprocessConnectorTemplate(data) {
@@ -370,7 +374,7 @@ if (assemblyList) {
           const pdf = await pdfjsLib.getDocument(url).promise;
           for (let p = 1; p <= pdf.numPages; p++) {
             const page = await pdf.getPage(p);
-            const viewport = page.getViewport({ scale: 2 });
+            const viewport = page.getViewport({ scale: PDF_IMPORT_SCALE });
             const c = document.createElement('canvas');
             c.width = viewport.width;
             c.height = viewport.height;

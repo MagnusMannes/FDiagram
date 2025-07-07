@@ -19,3 +19,9 @@ the rest of the assembly.
 Click anywhere within a component's body to drag it around the canvas. Each
 part's bounding box is now treated as a draggable area, so hollow regions are
 also easily clickable.
+
+## External drawings
+
+When uploading PDF drawings as assemblies the pages are now rendered at a
+higher resolution before being added to your BHA. This results in clearer
+images when exporting or printing your assemblies.

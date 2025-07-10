@@ -739,22 +739,22 @@ if (bhaCanvas) {
     contextMenu.style.display = 'none';
     editTarget = contextTarget;
     drawerWin = window.open(FDRAWER_URL, 'fdrawer');
-    const sendEditMsg = () => {
+    const sendNewBodyMsg = () => {
       if (drawerWin && !drawerWin.closed) {
-        drawerWin.postMessage({ type: 'editComponent', component: editTarget.comp }, '*');
+        drawerWin.postMessage({ type: 'addBody' }, '*');
       }
     };
     if (drawerWin) {
       let attempts = 0;
       const interval = setInterval(() => {
         attempts++;
-        sendEditMsg();
+        sendNewBodyMsg();
         if (!drawerWin || drawerWin.closed || attempts >= 10) {
           clearInterval(interval);
         }
       }, 300);
       drawerWin.onload = () => {
-        sendEditMsg();
+        sendNewBodyMsg();
       };
     }
   });

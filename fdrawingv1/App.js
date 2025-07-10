@@ -35,6 +35,9 @@ window.addEventListener('message', (e) => {
     if (msg.type === 'editComponent' && msg.component) {
       saveState();
       loadFromData(msg.component);
+    } else if (msg.type === 'addBody') {
+      // mimic the user clicking the "Create body" button
+      addBody();
     }
   }
 });

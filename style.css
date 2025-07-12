@@ -74,6 +74,6 @@ button.export-btn{background:#ff9500;color:#fff;margin-left:1rem;}
 #bhaCanvas{background:#fff;border:1px solid #dcdce0;margin-bottom:1rem;height:100%;aspect-ratio:210/297;width:auto;max-height:calc(100vh - 6rem);}
 
 /*  ─── Component Preview ─────────────────────────────── */
-.preview-canvas{position:absolute;top:1rem;right:1rem;width:200px;height:200px;border:1px solid #dcdce0;background:#fff;pointer-events:none;}
-.assy-preview{position:absolute;top:1rem;right:1rem;width:210px;height:297px;border:1px solid #dcdce0;background:#fff;}
+.preview-canvas{position:absolute;top:1rem;right:1rem;width:400px;height:400px;border:1px solid #dcdce0;background:#fff;pointer-events:none;}
+.assy-preview{position:absolute;top:1rem;right:1rem;width:420px;height:594px;border:1px solid #dcdce0;background:#fff;}
 

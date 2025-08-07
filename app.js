@@ -1035,7 +1035,7 @@ if (bhaCanvas) {
     ctx.fillStyle = '#000';
     ctx.font = (12 * scale * textScale) + 'px sans-serif';
     const rawVal = dia.item.comp.od !== undefined ? dia.item.comp.od : (b.width * dia.item.scale) / 12;
-    const val = '\u00F8 ' + formatTwelfthInches(rawVal);
+    const val = '\u00F8 ' + (typeof rawVal === 'number' ? formatTwelfthInches(rawVal) : rawVal);
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     ctx.fillText(val, left - DIAMETER_OFFSET * scale - 4 * scale, y);
@@ -1055,7 +1055,7 @@ if (bhaCanvas) {
     if (Math.abs(y - lineY) <= 6 && x >= left && x <= right) return true;
 
     const rawVal = dia.item.comp.od !== undefined ? dia.item.comp.od : (b.width * dia.item.scale) / 12;
-    const val = '\u00F8 ' + formatTwelfthInches(rawVal);
+    const val = '\u00F8 ' + (typeof rawVal === 'number' ? formatTwelfthInches(rawVal) : rawVal);
     ctx.font = '12px sans-serif';
     const textWidth = ctx.measureText(val).width;
     const textHeight = 12;
@@ -1319,14 +1319,12 @@ if (bhaCanvas) {
     }
     for (let i = diameters.length - 1; i >= 0; i--) {
       if (diameterHitTest(diameters[i], x, y)) {
-        const cur = diameters[i].item.comp.od || '';
-        const input = prompt('Enter diameter in inches:', cur);
+        const cur = diameters[i].item.comp.od !== undefined ? String(diameters[i].item.comp.od) : '';
+        const input = prompt('Enter diameter:', cur);
         if (input !== null) {
           const v = parseInches(input);
-          if (!isNaN(v)) {
-            diameters[i].item.comp.od = v;
-            redraw();
-          }
+          diameters[i].item.comp.od = isNaN(v) ? input.trim() : v;
+          redraw();
         }
         break;
       }
@@ -2702,7 +2700,7 @@ function drawDiameter(ctx, dia, scale = 1, textScale = 1) {
   ctx.fillStyle = '#000';
   ctx.font = (12 * scale * textScale) + 'px sans-serif';
   const rawVal = dia.item.comp.od !== undefined ? dia.item.comp.od : (b.width * dia.item.scale) / 12;
-  const val = '\u00F8 ' + formatTwelfthInches(rawVal);
+  const val = '\u00F8 ' + (typeof rawVal === 'number' ? formatTwelfthInches(rawVal) : rawVal);
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   ctx.fillText(val, left - PREVIEW_DIAMETER_OFFSET * scale - 4 * scale, y);

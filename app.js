@@ -1034,7 +1034,7 @@ if (bhaCanvas) {
     }
     ctx.fillStyle = '#000';
     ctx.font = (12 * scale * textScale) + 'px sans-serif';
-    const displayVal = dia.item.comp.od !== undefined ? String(dia.item.comp.od) : '';
+    const displayVal = dia.label !== undefined ? String(dia.label) : '';
     const val = displayVal ? '\u00F8 ' + displayVal : '';
     if (val) {
       ctx.textAlign = 'right';
@@ -1056,7 +1056,7 @@ if (bhaCanvas) {
     }
     if (Math.abs(y - lineY) <= 6 && x >= left && x <= right) return true;
 
-    const displayVal = dia.item.comp.od !== undefined ? String(dia.item.comp.od) : '';
+    const displayVal = dia.label !== undefined ? String(dia.label) : '';
     const val = displayVal ? '\u00F8 ' + displayVal : '';
     if (val) {
       ctx.font = '12px sans-serif';
@@ -1225,7 +1225,7 @@ if (bhaCanvas) {
         const b = getComponentBounds(target.comp);
         let ly = (y - target.y) / target.scale;
         if (target.flipped) ly = b.height - ly;
-        diameters.push({ item: target, y: ly, offset: 0, style: 'double' });
+        diameters.push({ item: target, y: ly, offset: 0, style: 'double', label: target.comp.od });
         diameterMode = false;
         if (addDiameterBtn) addDiameterBtn.textContent = 'Add diameter';
         redraw();
@@ -1323,10 +1323,10 @@ if (bhaCanvas) {
     }
     for (let i = diameters.length - 1; i >= 0; i--) {
       if (diameterHitTest(diameters[i], x, y)) {
-        const cur = diameters[i].item.comp.od !== undefined ? String(diameters[i].item.comp.od) : '';
+        const cur = diameters[i].label !== undefined ? String(diameters[i].label) : '';
         const input = prompt('Enter diameter:', cur);
         if (input !== null) {
-          diameters[i].item.comp.od = input.trim();
+          diameters[i].label = input.trim();
           redraw();
         }
         break;
@@ -1965,7 +1965,8 @@ if (bhaCanvas) {
           item: it,
           y: di.y,
           offset: di.offset || 0,
-          style: di.style || 'double'
+          style: di.style || 'double',
+          label: di.label != null ? di.label : (it.comp.od !== undefined ? it.comp.od : undefined)
         });
       }
     });
@@ -2196,7 +2197,8 @@ if (bhaCanvas) {
       itemIndex: idxMap.get(di.item),
       y: di.y,
       offset: di.offset || 0,
-      style: di.style || 'double'
+      style: di.style || 'double',
+      label: di.label != null ? di.label : null
     }));
     assyObj.fields = fields;
     saveCurrentBha();
@@ -2702,7 +2704,7 @@ function drawDiameter(ctx, dia, scale = 1, textScale = 1) {
 
   ctx.fillStyle = '#000';
   ctx.font = (12 * scale * textScale) + 'px sans-serif';
-  const displayVal = dia.item.comp.od !== undefined ? String(dia.item.comp.od) : '';
+  const displayVal = dia.label !== undefined ? String(dia.label) : '';
   const val = displayVal ? '\u00F8 ' + displayVal : '';
   if (val) {
     ctx.textAlign = 'right';
@@ -2814,7 +2816,8 @@ function renderAssembly(ctx, assy, scale) {
     item: items[di.itemIndex],
     y: di.y,
     offset: di.offset || 0,
-    style: di.style || 'double'
+    style: di.style || 'double',
+    label: di.label != null ? di.label : (items[di.itemIndex] && items[di.itemIndex].comp.od !== undefined ? items[di.itemIndex].comp.od : undefined)
   }));
   const textBoxes = (assy.texts || []).map(t => ({ text: t.text || '', x: t.x || 0, y: t.y || 0 }));
 

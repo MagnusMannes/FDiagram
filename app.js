@@ -1034,11 +1034,13 @@ if (bhaCanvas) {
     }
     ctx.fillStyle = '#000';
     ctx.font = (12 * scale * textScale) + 'px sans-serif';
-    const rawVal = dia.item.comp.od !== undefined ? dia.item.comp.od : (b.width * dia.item.scale) / 12;
-    const val = '\u00F8 ' + (typeof rawVal === 'number' ? formatTwelfthInches(rawVal) : rawVal);
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(val, left - DIAMETER_OFFSET * scale - 4 * scale, y);
+    const displayVal = dia.item.comp.od !== undefined ? String(dia.item.comp.od) : '';
+    const val = displayVal ? '\u00F8 ' + displayVal : '';
+    if (val) {
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(val, left - DIAMETER_OFFSET * scale - 4 * scale, y);
+    }
   }
 
   function diameterHitTest(dia, x, y) {
@@ -1054,16 +1056,18 @@ if (bhaCanvas) {
     }
     if (Math.abs(y - lineY) <= 6 && x >= left && x <= right) return true;
 
-    const rawVal = dia.item.comp.od !== undefined ? dia.item.comp.od : (b.width * dia.item.scale) / 12;
-    const val = '\u00F8 ' + (typeof rawVal === 'number' ? formatTwelfthInches(rawVal) : rawVal);
-    ctx.font = '12px sans-serif';
-    const textWidth = ctx.measureText(val).width;
-    const textHeight = 12;
-    const tx2 = dia.item.x + b.minX * dia.item.scale - DIAMETER_OFFSET - 4;
-    const tx1 = tx2 - textWidth - 4;
-    const ty1 = lineY - textHeight / 2 - 2;
-    const ty2 = lineY + textHeight / 2 + 2;
-    if (x >= tx1 && x <= tx2 && y >= ty1 && y <= ty2) return true;
+    const displayVal = dia.item.comp.od !== undefined ? String(dia.item.comp.od) : '';
+    const val = displayVal ? '\u00F8 ' + displayVal : '';
+    if (val) {
+      ctx.font = '12px sans-serif';
+      const textWidth = ctx.measureText(val).width;
+      const textHeight = 12;
+      const tx2 = dia.item.x + b.minX * dia.item.scale - DIAMETER_OFFSET - 4;
+      const tx1 = tx2 - textWidth - 4;
+      const ty1 = lineY - textHeight / 2 - 2;
+      const ty2 = lineY + textHeight / 2 + 2;
+      if (x >= tx1 && x <= tx2 && y >= ty1 && y <= ty2) return true;
+    }
     return false;
   }
 
@@ -1322,8 +1326,7 @@ if (bhaCanvas) {
         const cur = diameters[i].item.comp.od !== undefined ? String(diameters[i].item.comp.od) : '';
         const input = prompt('Enter diameter:', cur);
         if (input !== null) {
-          const v = parseInches(input);
-          diameters[i].item.comp.od = isNaN(v) ? input.trim() : v;
+          diameters[i].item.comp.od = input.trim();
           redraw();
         }
         break;
@@ -2699,11 +2702,13 @@ function drawDiameter(ctx, dia, scale = 1, textScale = 1) {
 
   ctx.fillStyle = '#000';
   ctx.font = (12 * scale * textScale) + 'px sans-serif';
-  const rawVal = dia.item.comp.od !== undefined ? dia.item.comp.od : (b.width * dia.item.scale) / 12;
-  const val = '\u00F8 ' + (typeof rawVal === 'number' ? formatTwelfthInches(rawVal) : rawVal);
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(val, left - PREVIEW_DIAMETER_OFFSET * scale - 4 * scale, y);
+  const displayVal = dia.item.comp.od !== undefined ? String(dia.item.comp.od) : '';
+  const val = displayVal ? '\u00F8 ' + displayVal : '';
+  if (val) {
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(val, left - PREVIEW_DIAMETER_OFFSET * scale - 4 * scale, y);
+  }
 }
 
 function drawTextBox(ctx, tb, scale = 1, textScale = 1) {
